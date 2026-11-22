@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Numbering Guessing</title>
+<style>
+/* =====================================================
+   EDIT ME: change the look of the game here.
+   Colors, fonts and roundness are all in this block.
+   ===================================================== */
+:root {
+  --bg: #fff1f8;            /* page background */
+  --card: #ffffff;          /* main card */
+  --ink: #4a3b6b;           /* text color */
+  --muted: #8d7fb0;         /* softer text */
+  --pink: #ff8fb8;          /* main button / accents */
+  --mint: #7fe0c3;          /* score badge, win */
+  --yellow: #ffd966;        /* digit box 3 */
+  --lavender: #b9a7ff;      /* digit box 4 */
+  --sky: #8fd3ff;           /* digit box 2 */
+  --danger: #ff7a7a;        /* surrender / error */
+  --radius: 24px;           /* roundness of cards */
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", "Quicksand", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+/* ===================== end of EDIT ME ===================== */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh;
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 18%, #ffd9ec 0 90px, transparent 91px),
+    radial-gradient(circle at 88% 12%, #d9f7ee 0 70px, transparent 71px),
+    radial-gradient(circle at 92% 86%, #e5ddff 0 110px, transparent 111px),
+    radial-gradient(circle at 8% 90%, #fff0bf 0 80px, transparent 81px),
+    var(--bg);
+  display: flex;
+  justify-content: center;
+  padding: 24px 16px 48px;
+}
+main { width: 100%; max-width: 460px; }
+
+h1 {
+  margin: 8px 0 4px;
+  text-align: center;
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  font-weight: 900;
+  letter-spacing: .5px;
+}
+h1 span:nth-child(1) { color: var(--pink); }
+h1 span:nth-child(2) { color: #5cc9a7; }
+h1 span:nth-child(3) { color: #f0b429; }
+.sub { text-align: center; margin: 0 0 20px; color: var(--muted); font-weight: 700; }
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 22px 18px;
+  box-shadow: 0 10px 0 #f3d3e6, 0 18px 30px rgba(120, 80, 160, .12);
+}
+
+.digits { display: flex; gap: 10px; justify-content: center; }
+.digits input {
+  width: 22%; max-width: 84px; aspect-ratio: 1 / 1.1;
+  font: inherit; font-size: 2.4rem; font-weight: 900; text-align: center;
+  color: var(--ink);
+  border: 4px solid transparent; border-radius: 22px;
+  outline: none;
+  transition: transform .15s, box-shadow .15s;
+}
+.digits input:nth-child(1) { background: #ffd0e3; }
+.digits input:nth-child(2) { background: #cdebff; }
+.digits input:nth-child(3) { background: #fff0b3; }
+.digits input:nth-child(4) { background: #e2d9ff; }
+.digits input:focus { border-color: var(--ink); transform: translateY(-4px) scale(1.05); box-shadow: 0 8px 0 rgba(74, 59, 107, .15); }
+.digits input:disabled { opacity: .6; }
+.digits.shake { animation: shake .4s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+.msg { min-height: 1.5em; margin: 14px 0 4px; text-align: center; font-weight: 800; color: var(--danger); }
+
+.row { display: flex; gap: 10px; margin-top: 8px; }
+button {
+  font: inherit; font-weight: 900; font-size: 1.05rem;
+  border: 0; border-radius: 999px; padding: 14px 18px; cursor: pointer;
+  color: #fff; transition: transform .1s, box-shadow .1s;
+}
+button:active { transform: translateY(3px); box-shadow: none !important; }
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+#guessBtn { flex: 2; background: var(--pink); box-shadow: 0 5px 0 #e0668f; }
+#giveUpBtn { flex: 1; background: var(--danger); box-shadow: 0 5px 0 #d85a5a; }
+#againBtn { width: 100%; background: #5cc9a7; box-shadow: 0 5px 0 #3fa688; margin-top: 14px; }
+
+.banner { display: none; margin-top: 18px; padding: 16px; border-radius: 20px; text-align: center; font-weight: 900; }
+.banner.show { display: block; animation: pop .4s; }
+.banner.win { background: #d9f7ee; }
+.banner.lose { background: #ffe3e3; }
+.banner .big { display: block; font-size: 2rem; letter-spacing: 6px; margin-top: 4px; }
+@keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.history-head { display: flex; justify-content: space-between; align-items: baseline; margin: 24px 4px 8px; font-weight: 900; }
+.history-head small { color: var(--muted); font-weight: 700; }
+#history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+#history li {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border-radius: 18px; padding: 10px 14px;
+  box-shadow: 0 4px 0 #f3d3e6;
+}
+#history .no { color: var(--muted); font-weight: 800; }
+#history .num { font-size: 1.5rem; font-weight: 900; letter-spacing: 6px; }
+#history .score { background: var(--mint); border-radius: 999px; min-width: 64px; text-align: center; padding: 6px 12px; font-weight: 900; }
+#history .score.zero { background: #ece6f7; color: var(--muted); }
+.empty { text-align: center; color: var(--muted); font-weight: 700; padding: 8px; }
+
+.rules { margin-top: 22px; color: var(--muted); font-weight: 700; font-size: .95rem; line-height: 1.5; text-align: center; }
+
+.confetti { position: fixed; top: -40px; font-size: 1.8rem; pointer-events: none; animation: fall linear forwards; z-index: 10; }
+@keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .confetti { display: none; }
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<main>
+  <h1 aria-label="Numbering Guessing"><span>Numbering</span> <span>Guess</span><span>ing</span> 🎈</h1>
+  <p class="sub">Find the secret 4-digit number!</p>
+
+  <section class="card">
+    <div class="digits" id="digits" role="group" aria-label="Your 4-digit guess"></div>
+    <p class="msg" id="msg" aria-live="polite"></p>
+    <div class="row">
+      <button id="guessBtn" type="button">Guess! ✨</button>
+      <button id="giveUpBtn" type="button">Give up</button>
+    </div>
+    <div class="banner" id="banner" role="status"></div>
+    <button id="againBtn" type="button" hidden>Play again 🎮</button>
+  </section>
+
+  <div class="history-head"><span>Your guesses</span><small id="count">0 tries</small></div>
+  <ul id="history"><li class="empty" id="empty">No guesses yet. Type 4 digits and press Guess!</li></ul>
+
+  <p class="rules">The number can start with 0 (like 0023).<br>
+    Each guess shows how many digits are right <b>and in the right place</b>.<br>
+    Example: secret 7264, guess 1234 → 2.</p>
+</main>
+
+<script>
+(function () {
+  var digitsEl = document.getElementById('digits');
+  var msgEl = document.getElementById('msg');
+  var guessBtn = document.getElementById('guessBtn');
+  var giveUpBtn = document.getElementById('giveUpBtn');
+  var againBtn = document.getElementById('againBtn');
+  var bannerEl = document.getElementById('banner');
+  var historyEl = document.getElementById('history');
+  var emptyEl = document.getElementById('empty');
+  var countEl = document.getElementById('count');
+  var boxes = [];
+  var secret = '';
+  var tries = 0;
+  var over = false;
+
+  // Build the 4 digit boxes
+  for (var i = 0; i < 4; i++) {
+    var b = document.createElement('input');
+    b.type = 'text';
+    b.inputMode = 'numeric';
+    b.maxLength = 1;
+    b.autocomplete = 'off';
+    b.setAttribute('aria-label', 'Digit ' + (i + 1));
+    b.dataset.i = i;
+    digitsEl.appendChild(b);
+    boxes.push(b);
+  }
+
+  boxes.forEach(function (box, i) {
+    box.addEventListener('input', function () {
+      var v = box.value.replace(/\D/g, '');
+      box.value = v.slice(-1);
+      msgEl.textContent = '';
+      if (box.value && i < 3) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !box.value && i > 0) { boxes[i - 1].focus(); boxes[i - 1].value = ''; e.preventDefault(); }
+      else if (e.key === 'ArrowLeft' && i > 0) boxes[i - 1].focus();
+      else if (e.key === 'ArrowRight' && i < 3) boxes[i + 1].focus();
+      else if (e.key === 'Enter') submitGuess();
+    });
+    box.addEventListener('focus', function () { box.select(); });
+    box.addEventListener('paste', function (e) {
+      var text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4);
+      if (!text) return;
+      e.preventDefault();
+      for (var k = 0; k < 4; k++) boxes[k].value = text[k] || '';
+      boxes[Math.min(text.length, 3)].focus();
+    });
+  });
+
+  function newSecret() {
+    return String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+  }
+
+  function clearBoxes() {
+    boxes.forEach(function (x) { x.value = ''; });
+    boxes[0].focus();
+  }
+
+  function setEnabled(on) {
+    boxes.forEach(function (x) { x.disabled = !on; });
+    guessBtn.disabled = !on;
+    giveUpBtn.disabled = !on;
+  }
+
+  function countMatches(guess) {
+    var n = 0;
+    for (var i = 0; i < 4; i++) if (guess[i] === secret[i]) n++;
+    return n;
+  }
+
+  function addHistory(guess, score) {
+    if (emptyEl.parentNode) emptyEl.parentNode.removeChild(emptyEl);
+    var li = document.createElement('li');
+    li.innerHTML = '<span class="no">#' + tries + '</span>' +
+      '<span class="num">' + guess + '</span>' +
+      '<span class="score' + (score === 0 ? ' zero' : '') + '">' + score + '</span>';
+    historyEl.insertBefore(li, historyEl.firstChild);
+    countEl.textContent = tries + (tries === 1 ? ' try' : ' tries');
+  }
+
+  function submitGuess() {
+    if (over) return;
+    var guess = boxes.map(function (x) { return x.value; }).join('');
+    if (!/^\d{4}$/.test(guess)) {
+      msgEl.textContent = 'Enter all 4 digits (for example 0023).';
+      digitsEl.classList.remove('shake'); void digitsEl.offsetWidth; digitsEl.classList.add('shake');
+      var firstEmpty = boxes.find(function (x) { return !x.value; });
+      if (firstEmpty) firstEmpty.focus();
+      return;
+    }
+    tries++;
+    var score = countMatches(guess);
+    addHistory(guess, score);
+    if (score === 4) { finish('win'); } else { clearBoxes(); }
+  }
+
+  function finish(kind) {
+    over = true;
+    setEnabled(false);
+    msgEl.textContent = '';
+    bannerEl.className = 'banner show ' + kind;
+    if (kind === 'win') {
+      bannerEl.innerHTML = '🎉 You got it in ' + tries + (tries === 1 ? ' try' : ' tries') + '! Congratulations!<span class="big">' + secret + '</span>';
+      confetti();
+    } else {
+      bannerEl.innerHTML = '🏳️ You gave up. The secret number was<span class="big">' + secret + '</span>';
+    }
+    againBtn.hidden = false;
+    againBtn.focus();
+  }
+
+  function confetti() {
+    var icons = ['🎈', '⭐', '🍭', '🌈', '💖', '🎀', '✨'];
+    for (var i = 0; i < 40; i++) {
+      var s = document.createElement('span');
+      s.className = 'confetti';
+      s.textContent = icons[i % icons.length];
+      s.style.left = Math.random() * 100 + 'vw';
+      s.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
+      s.style.animationDelay = (Math.random() * 0.8) + 's';
+      document.body.appendChild(s);
+      setTimeout(function (el) { el.remove(); }.bind(null, s), 6500);
+    }
+  }
+
+  function startGame() {
+    secret = newSecret();
+    tries = 0;
+    over = false;
+    historyEl.innerHTML = '';
+    historyEl.appendChild(emptyEl);
+    countEl.textContent = '0 tries';
+    bannerEl.className = 'banner';
+    bannerEl.innerHTML = '';
+    againBtn.hidden = true;
+    msgEl.textContent = '';
+    setEnabled(true);
+    clearBoxes();
+  }
+
+  guessBtn.addEventListener('click', submitGuess);
+  giveUpBtn.addEventListener('click', function () {
+    if (over) return;
+    if (window.confirm('Give up and see the secret number?')) finish('lose');
+  });
+  againBtn.addEventListener('click', startGame);
+
+  startGame();
+})();
+</script>
+</body>
+</html>
