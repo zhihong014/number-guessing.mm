@@ -118,15 +118,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .hhead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
 .hhead h2 { margin: 0; } .hhead small { color: var(--muted); font-weight: 800; }
 #history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 2px; }
-#history li { display: grid; grid-template-columns: 32px 1fr auto 34px; align-items: center; gap: 10px; background: #f6f3ff; border-radius: 16px; padding: 8px 12px; animation: rise .3s; }
+#history li { display: grid; grid-template-columns: 32px 1fr 34px; align-items: center; gap: 10px; background: #f6f3ff; border-radius: 16px; padding: 8px 12px; animation: rise .3s; }
 #history .no { color: var(--muted); font-weight: 900; font-size: .85rem; }
 .tiles { display: flex; gap: 5px; }
 .tiles span { width: 30px; height: 36px; display: grid; place-items: center; border-radius: 10px; font-weight: 900; font-size: 1.1rem; }
 .tiles span:nth-child(1) { background: var(--c1); } .tiles span:nth-child(2) { background: var(--c2); }
 .tiles span:nth-child(3) { background: var(--c3); } .tiles span:nth-child(4) { background: var(--c4); }
-.pips { display: flex; gap: 4px; }
-.pips i { width: 10px; height: 10px; border-radius: 50%; background: #ddd6f5; }
-.pips i.on { background: var(--mint); box-shadow: 0 0 0 2px #c9f6e8; }
 #history .score { font-weight: 900; font-size: 1.25rem; text-align: center; }
 #history li.empty { display: block; background: transparent; border: 3px dashed #ddd6f5; color: var(--muted); font-weight: 800; text-align: center; padding: 20px 8px; animation: none; }
 
@@ -363,10 +360,8 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: c
 
   function addHistory(guess, score) {
     if (emptyEl.parentNode) emptyEl.parentNode.removeChild(emptyEl);
-    var pips = '';
-    for (var i = 0; i < 4; i++) pips += '<i' + (i < score ? ' class="on"' : '') + '></i>';
     var li = document.createElement('li');
-    li.innerHTML = '<span class="no">#' + tries + '</span><span class="tiles">' + tiles(guess) + '</span><span class="pips" aria-hidden="true">' + pips + '</span><span class="score" aria-label="' + score + ' correct">' + score + '</span>';
+    li.innerHTML = '<span class="no">#' + tries + '</span><span class="tiles">' + tiles(guess) + '</span><span class="score" aria-label="' + score + ' correct">' + score + '</span>';
     historyEl.insertBefore(li, historyEl.firstChild);
     countEl.textContent = tries; countTextEl.textContent = triesText();
   }
