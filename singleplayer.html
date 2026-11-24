@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Numbering Guessing</title>
+<style>
+/* =====================================================
+   EDIT ME: change the look of the game here.
+   ===================================================== */
+:root {
+  --bg1: #5b3df5;           /* page gradient start (violet) */
+  --bg2: #1fa2ff;           /* page gradient end (blue) */
+  --card: #ffffff;
+  --rim: #F5FDFF;           /* card border color */
+  --ink: #2a1f5c;           /* main text */
+  --muted: #7a6fa8;         /* secondary text */
+  --pink: #ff5fa2;
+  --yellow: #ffc933;
+  --mint: #2fd6a1;
+  --sky: #4db8ff;
+  --orange: #ff8a3d;
+  --red: #ff4d6d;
+  /* the four digit box colors */
+  --c1: #ffe08a; --c1d: #e0b43c;
+  --c2: #ffb3d1; --c2d: #e0709f;
+  --c3: #9cf0d4; --c3d: #3fc79b;
+  --c4: #a9dcff; --c4d: #5aa9e0;
+  --radius: 24px;
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", "Quicksand", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* ===================== end of EDIT ME ===================== */
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  min-height: 100vh; font-family: var(--font); color: var(--ink);
+  background:
+    repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 16px, transparent 16px 32px),
+    linear-gradient(135deg, var(--bg1), var(--bg2));
+  background-attachment: fixed;
+  padding: 22px 14px 60px;
+}
+.wrap { max-width: 1020px; margin: 0 auto; }
+button { font: inherit; cursor: pointer; border: 0; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+
+/* Header + level */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; justify-content: space-between; margin-bottom: 18px; color: #fff; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 54px; height: 54px; border-radius: 18px; background: var(--yellow); color: var(--ink); display: grid; place-items: center; font-size: 1.7rem; font-weight: 900; box-shadow: 0 5px 0 #d99f00; transform: rotate(-6deg); }
+.brand h1 { margin: 0; font-size: clamp(1.5rem, 5vw, 2.2rem); font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(20,10,80,.35); }
+.brand p { margin: 4px 0 0; font-weight: 700; opacity: .9; }
+.level { min-width: 230px; flex: 1; max-width: 330px; background: rgba(255,255,255,.18); border: 2px solid rgba(255,255,255,.4); border-radius: 18px; padding: 10px 14px; }
+.level .lrow { display: flex; justify-content: space-between; font-weight: 900; margin-bottom: 6px; }
+.bar { height: 12px; background: rgba(20,10,80,.3); border-radius: 99px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--yellow), var(--orange)); border-radius: 99px; transition: width .6s; }
+.level small { display: block; margin-top: 5px; font-weight: 700; opacity: .9; }
+
+/* Layout */
+.layout { display: grid; gap: 18px; grid-template-columns: 1fr; align-items: start; }
+.col { display: grid; gap: 18px; }
+@media (min-width: 880px) { .layout { grid-template-columns: 1.1fr 1fr; } }
+
+.card { background: var(--card); border: 3px solid var(--rim); border-radius: var(--radius); padding: 20px; box-shadow: 0 8px 0 rgba(20,10,80,.28), 0 18px 30px rgba(20,10,80,.18); }
+.card h2 { margin: 0 0 12px; font-size: 1.15rem; font-weight: 900; }
+
+/* Mode switch + stats */
+.modes { display: flex; gap: 6px; background: #efeaff; border-radius: 16px; padding: 5px; margin-bottom: 14px; }
+.modes button { flex: 1; padding: 10px; border-radius: 12px; background: transparent; color: var(--muted); font-weight: 900; }
+.modes button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 3px 0 #d6cdf5; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+.stat { border-radius: 16px; padding: 8px 4px; text-align: center; }
+.stat:nth-child(1) { background: #ffe9d6; } .stat:nth-child(2) { background: #fff2c2; }
+.stat:nth-child(3) { background: #d6f8ec; } .stat:nth-child(4) { background: #ddf0ff; }
+.stat b { display: block; font-size: 1.4rem; font-weight: 900; line-height: 1.1; }
+.stat small { font-weight: 800; font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+
+/* Digit boxes */
+.digits { display: flex; gap: 10px; justify-content: center; }
+.digits input {
+  width: 100%; max-width: 86px; height: 92px; font: inherit; font-size: 2.6rem; font-weight: 900; text-align: center;
+  color: var(--ink); border: 0; border-radius: 20px; outline: none; caret-color: transparent;
+  transition: transform .12s, box-shadow .12s;
+}
+.digits input:nth-child(1) { background: var(--c1); box-shadow: 0 7px 0 var(--c1d); }
+.digits input:nth-child(2) { background: var(--c2); box-shadow: 0 7px 0 var(--c2d); }
+.digits input:nth-child(3) { background: var(--c3); box-shadow: 0 7px 0 var(--c3d); }
+.digits input:nth-child(4) { background: var(--c4); box-shadow: 0 7px 0 var(--c4d); }
+.digits input:focus { transform: translateY(-5px) scale(1.06); filter: brightness(1.05); }
+.digits input:disabled { opacity: 1; -webkit-text-fill-color: var(--ink); }
+.digits.revealed input { animation: bounce .6s; }
+.digits.shake { animation: shake .4s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+@keyframes bounce { 40% { transform: translateY(-14px); } }
+
+.hints { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 14px; min-height: 8px; }
+.hints span { background: #fff2c2; border-radius: 99px; padding: 5px 12px; font-weight: 800; font-size: .85rem; }
+.msg { min-height: 1.4em; margin: 10px 0 6px; text-align: center; font-weight: 800; color: var(--red); }
+
+/* Buttons */
+.row { display: flex; gap: 8px; }
+.btn { border-radius: 16px; padding: 14px 16px; font-weight: 900; font-size: 1rem; color: #fff; transition: transform .08s, box-shadow .08s; }
+.btn:active:not(:disabled) { transform: translateY(4px); box-shadow: none !important; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.b-go { flex: 2; background: var(--pink); box-shadow: 0 5px 0 #d63a82; }
+.b-hint { flex: 1.2; background: var(--orange); box-shadow: 0 5px 0 #d46a1f; }
+.b-quit { flex: 1; background: #8b80c4; box-shadow: 0 5px 0 #6a5fa5; }
+.b-new { width: 100%; margin-top: 14px; background: var(--mint); color: #0b4a37; box-shadow: 0 5px 0 #1fa87e; }
+
+.banner { display: none; margin-top: 14px; padding: 12px 14px; border-radius: 16px; font-weight: 800; text-align: center; }
+.banner.show { display: block; animation: rise .35s; }
+.banner.win { background: #d6f8ec; color: #0b6b4a; }
+.banner.lose { background: #ffe1e7; color: #a02744; }
+@keyframes rise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* History */
+.hhead { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.hhead h2 { margin: 0; } .hhead small { color: var(--muted); font-weight: 800; }
+#history { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; max-height: 360px; overflow-y: auto; padding-right: 2px; }
+#history li { display: grid; grid-template-columns: 32px 1fr auto 34px; align-items: center; gap: 10px; background: #f6f3ff; border-radius: 16px; padding: 8px 12px; animation: rise .3s; }
+#history .no { color: var(--muted); font-weight: 900; font-size: .85rem; }
+.tiles { display: flex; gap: 5px; }
+.tiles span { width: 30px; height: 36px; display: grid; place-items: center; border-radius: 10px; font-weight: 900; font-size: 1.1rem; }
+.tiles span:nth-child(1) { background: var(--c1); } .tiles span:nth-child(2) { background: var(--c2); }
+.tiles span:nth-child(3) { background: var(--c3); } .tiles span:nth-child(4) { background: var(--c4); }
+.pips { display: flex; gap: 4px; }
+.pips i { width: 10px; height: 10px; border-radius: 50%; background: #ddd6f5; }
+.pips i.on { background: var(--mint); box-shadow: 0 0 0 2px #c9f6e8; }
+#history .score { font-weight: 900; font-size: 1.25rem; text-align: center; }
+#history li.empty { display: block; background: transparent; border: 3px dashed #ddd6f5; color: var(--muted); font-weight: 800; text-align: center; padding: 20px 8px; animation: none; }
+
+/* Badges */
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.badge { display: flex; gap: 10px; align-items: center; background: #f6f3ff; border-radius: 16px; padding: 10px; filter: grayscale(1); opacity: .5; }
+.badge.on { filter: none; opacity: 1; background: #fff2c2; }
+.badge .ic { font-size: 1.7rem; }
+.badge b { display: block; font-size: .9rem; line-height: 1.15; }
+.badge small { color: var(--muted); font-weight: 700; font-size: .72rem; line-height: 1.2; display: block; }
+
+/* Rules popup */
+.rules-popup { text-align: left; }
+.rules-popup .emoji, .rules-popup h2 { text-align: center; }
+.rules-popup ol { margin: 14px 0 6px; padding-left: 1.5rem; line-height: 1.5; font-weight: 700; }
+.rules-popup li { margin-bottom: 8px; padding-left: 4px; }
+.rules-popup li::marker { color: var(--pink); font-weight: 900; }
+.b-rules { background: rgba(255,255,255,.22); border: 2px solid rgba(255,255,255,.5); padding: 10px 16px; border-radius: 14px; }
+.b-rules:hover { background: rgba(255,255,255,.32); }
+a.btn { display: inline-block; text-decoration: none; color: #fff; }
+
+/* Popups */
+.overlay { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(25, 10, 70, .6); }
+.overlay.show { display: flex; }
+.popup { width: 100%; max-width: 400px; max-height: 92vh; overflow-y: auto; text-align: center; background: #fff; border: 3px solid var(--rim); border-radius: 30px; padding: 26px 20px 20px; box-shadow: 0 10px 0 rgba(20,10,80,.3), 0 30px 60px rgba(0,0,0,.35); animation: pop .45s cubic-bezier(.2,1.4,.4,1); }
+@keyframes pop { from { transform: scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+.popup .emoji { font-size: 3.4rem; line-height: 1; }
+.popup h2 { margin: 8px 0 4px; font-size: 1.8rem; font-weight: 900; color: var(--pink); }
+.popup p { margin: 0; color: var(--muted); font-weight: 800; }
+.bignum { display: flex; gap: 8px; justify-content: center; margin: 16px 0 12px; }
+.bignum span { width: 56px; height: 68px; display: grid; place-items: center; border-radius: 16px; font-size: 2.1rem; font-weight: 900; }
+.bignum span:nth-child(1) { background: var(--c1); box-shadow: 0 5px 0 var(--c1d); } .bignum span:nth-child(2) { background: var(--c2); box-shadow: 0 5px 0 var(--c2d); }
+.bignum span:nth-child(3) { background: var(--c3); box-shadow: 0 5px 0 var(--c3d); } .bignum span:nth-child(4) { background: var(--c4); box-shadow: 0 5px 0 var(--c4d); }
+.reward { display: inline-block; background: linear-gradient(90deg, var(--yellow), var(--orange)); color: var(--ink); font-weight: 900; border-radius: 99px; padding: 6px 16px; margin: 4px 0; }
+.extra { font-weight: 900; margin-top: 8px; }
+.popup .btn { width: 100%; margin-top: 10px; }
+.b-view { background: #7b5cff; box-shadow: 0 5px 0 #5b3df5; }
+.b-keep { background: var(--mint); color: #0b4a37; box-shadow: 0 5px 0 #1fa87e; }
+.b-yes { background: var(--red); box-shadow: 0 5px 0 #c92f4d; }
+
+.confetti { position: fixed; top: -20px; width: 10px; height: 16px; border-radius: 3px; pointer-events: none; animation: fall linear forwards; z-index: 30; }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">#</div>
+      <div><h1>Numbering Guessing</h1><p>Crack the secret 4-digit code!</p></div>
+    </div>
+    <a class="btn b-rules" id="homeLink" href="index.html">🏠 Home</a>
+    <button id="rulesBtn" class="btn b-rules" type="button">📋 Rules</button>
+    <div class="level" aria-label="Your level">
+      <div class="lrow"><span id="rank">Rookie</span><span id="lvl">Lv 1</span></div>
+      <div class="bar"><i id="xpbar"></i></div>
+      <small id="xptext">0 / 100 XP</small>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div class="col">
+      <section class="card" aria-label="Game">
+        <div class="modes" role="group" aria-label="Game mode">
+          <button type="button" id="modeRandom" aria-pressed="true">🎲 Random</button>
+          <button type="button" id="modeDaily" aria-pressed="false">📅 Daily challenge</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="sStreak">0</b><small>🔥 Streak</small></div>
+          <div class="stat"><b id="sWins">0</b><small>🏆 Wins</small></div>
+          <div class="stat"><b id="sBest">-</b><small>⚡ Best</small></div>
+          <div class="stat"><b id="count">0</b><small>🎯 Tries</small></div>
+        </div>
+        <div class="digits" id="digits" role="group" aria-label="Your 4-digit guess"></div>
+        <div class="hints" id="hints" aria-live="polite"></div>
+        <p class="msg" id="msg" aria-live="polite"></p>
+        <div class="row">
+          <button id="guessBtn" class="btn b-go" type="button">Guess! ✨</button>
+          <button id="hintBtn" class="btn b-hint" type="button">💡 Hint</button>
+          <button id="giveUpBtn" class="btn b-quit" type="button">Give up</button>
+        </div>
+        <div class="banner" id="banner" role="status"></div>
+        <button id="againBtn" class="btn b-new" type="button" hidden>Try new game 🎮</button>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="card" aria-label="Guess history">
+        <div class="hhead"><h2>📝 Your guesses</h2><small id="countText">0 tries</small></div>
+        <ul id="history"><li class="empty" id="empty">No guesses yet. Type 4 digits and press Guess!</li></ul>
+      </section>
+      <section class="card" aria-label="Achievements">
+        <h2>🏅 Achievements</h2>
+        <div class="badges" id="badges"></div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="rulesPop" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+  <div class="popup rules-popup">
+    <div class="emoji">📋</div>
+    <h2 id="rulesTitle">How to play</h2>
+    <ol>
+      <li>The secret number has exactly 4 digits and can start with 0, like 0023.</li>
+      <li>The secret number stays the same until you guess it or give up.</li>
+      <li>Enter exactly 4 digits, then press Guess.</li>
+      <li>Each guess shows how many digits are right and in the right place.</li>
+      <li>Example: if the secret is 7264, the guess 1234 shows 2 and the guess 2754 shows 1.</li>
+      <li>Guess all 4 digits to win, or press Give up to end the game and see the number.</li>
+      <li>Hints cost XP, and a daily challenge gives bonus XP once per day.</li>
+    </ol>
+    <button id="startBtn" class="btn b-keep" type="button">Got it, let’s play! 🎮</button>
+  </div>
+</div>
+
+<div class="overlay" id="overlay" role="dialog" aria-modal="true" aria-labelledby="popupTitle">
+  <div class="popup">
+    <div class="emoji">🎉</div>
+    <h2 id="popupTitle">Congratulations!</h2>
+    <p id="popupText"></p>
+    <div class="bignum" id="popupNumber"></div>
+    <div class="reward" id="popupXp"></div>
+    <div class="extra" id="popupExtra"></div>
+    <button id="viewBtn" class="btn b-view" type="button">View my number and guesses</button>
+    <button id="popupAgainBtn" class="btn b-keep" type="button">Try new game 🎮</button>
+  </div>
+</div>
+
+<div class="overlay" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+  <div class="popup">
+    <div class="emoji">🏳️</div>
+    <h2 id="confirmTitle">Give up?</h2>
+    <p>The secret number will be shown and your win streak will reset.</p>
+    <button id="yesQuit" class="btn b-yes" type="button">Yes, show the number</button>
+    <button id="keepPlaying" class="btn b-keep" type="button">Keep playing</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var digitsEl = $('digits'), msgEl = $('msg'), guessBtn = $('guessBtn'), hintBtn = $('hintBtn'), giveUpBtn = $('giveUpBtn');
+  var againBtn = $('againBtn'), bannerEl = $('banner'), historyEl = $('history'), emptyEl = $('empty'), hintsEl = $('hints');
+  var countEl = $('count'), countTextEl = $('countText');
+  var overlayEl = $('overlay'), confirmEl = $('confirm'), rulesEl = $('rulesPop');
+  var boxes = [], secret = '', tries = 0, over = false, mode = 'random', hintPos = [];
+  var MAX_HINTS = 2, HINT_COST = 15;
+
+  /* ---------- Saved progress (browser storage, safe if blocked) ---------- */
+  var KEY = 'numbering-guessing-save-v1';
+  var save = { xp: 0, wins: 0, streak: 0, best: 0, badges: {}, dailyDone: '' };
+  try { var raw = localStorage.getItem(KEY); if (raw) { var p = JSON.parse(raw); for (var k in p) save[k] = p[k]; } } catch (e) {}
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+  var BADGES = [
+    { id: 'first',  ic: '🌟', name: 'First Win',   desc: 'Win your first game' },
+    { id: 'lucky',  ic: '🍀', name: 'Lucky Guess', desc: 'Win in 5 tries or fewer' },
+    { id: 'brain',  ic: '🧠', name: 'Pure Brain',  desc: 'Win without any hint' },
+    { id: 'streak', ic: '🔥', name: 'On Fire',     desc: 'Win 3 games in a row' },
+    { id: 'vet',    ic: '🏆', name: 'Veteran',     desc: 'Win 10 games' },
+    { id: 'daily',  ic: '📅', name: 'Daily Hero',  desc: 'Solve a daily challenge' }
+  ];
+
+  function level() { return Math.floor(save.xp / 100) + 1; }
+  function rank(l) { return l >= 10 ? 'Legend' : l >= 7 ? 'Mastermind' : l >= 4 ? 'Code Breaker' : l >= 2 ? 'Detective' : 'Rookie'; }
+  function renderProgress() {
+    var l = level(), into = save.xp % 100;
+    $('rank').textContent = rank(l); $('lvl').textContent = 'Lv ' + l;
+    $('xpbar').style.width = into + '%'; $('xptext').textContent = into + ' / 100 XP';
+    $('sStreak').textContent = save.streak; $('sWins').textContent = save.wins; $('sBest').textContent = save.best || '-';
+    $('badges').innerHTML = BADGES.map(function (b) {
+      return '<div class="badge' + (save.badges[b.id] ? ' on' : '') + '"><span class="ic">' + b.ic + '</span><span><b>' + b.name + '</b><small>' + b.desc + '</small></span></div>';
+    }).join('');
+  }
+
+  /* ---------- Digit boxes ---------- */
+  for (var i = 0; i < 4; i++) {
+    var b = document.createElement('input');
+    b.type = 'text'; b.inputMode = 'numeric'; b.maxLength = 1; b.autocomplete = 'off';
+    b.setAttribute('aria-label', 'Digit ' + (i + 1));
+    digitsEl.appendChild(b); boxes.push(b);
+  }
+  boxes.forEach(function (box, i) {
+    box.addEventListener('input', function () {
+      box.value = box.value.replace(/\D/g, '').slice(-1); msgEl.textContent = '';
+      if (box.value && i < 3) boxes[i + 1].focus();
+    });
+    box.addEventListener('keydown', function (e) {
+      if (e.key === 'Backspace' && !box.value && i > 0) { boxes[i - 1].focus(); boxes[i - 1].value = ''; e.preventDefault(); }
+      else if (e.key === 'ArrowLeft' && i > 0) boxes[i - 1].focus();
+      else if (e.key === 'ArrowRight' && i < 3) boxes[i + 1].focus();
+      else if (e.key === 'Enter') submitGuess();
+    });
+    box.addEventListener('focus', function () { box.select(); });
+    box.addEventListener('paste', function (e) {
+      var t = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4);
+      if (!t) return; e.preventDefault();
+      for (var k = 0; k < 4; k++) boxes[k].value = t[k] || '';
+      boxes[Math.min(t.length, 3)].focus();
+    });
+  });
+
+  /* ---------- Helpers ---------- */
+  function todayKey() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function dailySecret() {            // same number for everyone on the same day
+    var s = todayKey(), h = 1779033703;
+    for (var i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = (h << 13) | (h >>> 19); }
+    h = Math.imul(h ^ (h >>> 16), 2246822507); h = Math.imul(h ^ (h >>> 13), 3266489909); h ^= h >>> 16;
+    return String((h >>> 0) % 10000).padStart(4, '0');
+  }
+  function randomSecret() { return String(Math.floor(Math.random() * 10000)).padStart(4, '0'); }
+  function clearBoxes() { boxes.forEach(function (x) { x.value = ''; }); boxes[0].focus(); }
+  function setEnabled(on) { boxes.forEach(function (x) { x.disabled = !on; }); guessBtn.disabled = !on; giveUpBtn.disabled = !on; updateHintBtn(on); }
+  function updateHintBtn(on) {
+    var left = MAX_HINTS - hintPos.length;
+    hintBtn.disabled = !on || left <= 0;
+    hintBtn.textContent = '💡 Hint (' + left + ')';
+  }
+  function countMatches(g) { var n = 0; for (var i = 0; i < 4; i++) if (g[i] === secret[i]) n++; return n; }
+  function triesText() { return tries + (tries === 1 ? ' try' : ' tries'); }
+  function tiles(s) { return s.split('').map(function (d) { return '<span>' + d + '</span>'; }).join(''); }
+
+  function addHistory(guess, score) {
+    if (emptyEl.parentNode) emptyEl.parentNode.removeChild(emptyEl);
+    var pips = '';
+    for (var i = 0; i < 4; i++) pips += '<i' + (i < score ? ' class="on"' : '') + '></i>';
+    var li = document.createElement('li');
+    li.innerHTML = '<span class="no">#' + tries + '</span><span class="tiles">' + tiles(guess) + '</span><span class="pips" aria-hidden="true">' + pips + '</span><span class="score" aria-label="' + score + ' correct">' + score + '</span>';
+    historyEl.insertBefore(li, historyEl.firstChild);
+    countEl.textContent = tries; countTextEl.textContent = triesText();
+  }
+
+  /* ---------- Actions ---------- */
+  function submitGuess() {
+    if (over) return;
+    var guess = boxes.map(function (x) { return x.value; }).join('');
+    if (!/^\d{4}$/.test(guess)) {
+      msgEl.textContent = 'Enter all 4 digits (for example 0023).';
+      digitsEl.classList.remove('shake'); void digitsEl.offsetWidth; digitsEl.classList.add('shake');
+      var empty = boxes.find(function (x) { return !x.value; }); if (empty) empty.focus();
+      return;
+    }
+    tries++;
+    var score = countMatches(guess);
+    addHistory(guess, score);
+    if (score === 4) finish('win'); else clearBoxes();
+  }
+
+  function giveHint() {
+    if (over || hintPos.length >= MAX_HINTS) return;
+    var open = [0, 1, 2, 3].filter(function (p) { return hintPos.indexOf(p) < 0; });
+    var pos = open[Math.floor(Math.random() * open.length)];
+    hintPos.push(pos);
+    var s = document.createElement('span');
+    s.textContent = '💡 Digit ' + (pos + 1) + ' is ' + secret[pos];
+    hintsEl.appendChild(s);
+    updateHintBtn(true);
+    var next = boxes.find(function (x) { return !x.value; }); if (next) next.focus();
+  }
+
+  function finish(kind) {
+    over = true; setEnabled(false); msgEl.textContent = '';
+    for (var i = 0; i < 4; i++) boxes[i].value = secret[i];
+    digitsEl.classList.remove('revealed'); void digitsEl.offsetWidth; digitsEl.classList.add('revealed');
+    bannerEl.className = 'banner show ' + kind;
+    againBtn.hidden = false;
+    if (kind === 'win') {
+      var before = level();
+      var gain = Math.max(10, 100 - (tries - 1) * 6 - hintPos.length * HINT_COST);
+      var extra = [];
+      if (mode === 'daily' && save.dailyDone !== todayKey()) { gain += 50; save.dailyDone = todayKey(); extra.push('📅 Daily bonus +50 XP'); }
+      save.xp += gain; save.wins++; save.streak++;
+      if (!save.best || tries < save.best) { save.best = tries; if (save.wins > 1) extra.push('⚡ New best: ' + tries + (tries === 1 ? ' try' : ' tries')); }
+      var earned = [];
+      function award(id, ok) { if (ok && !save.badges[id]) { save.badges[id] = true; earned.push(BADGES.filter(function (b) { return b.id === id; })[0]); } }
+      award('first', true); award('lucky', tries <= 5); award('brain', hintPos.length === 0);
+      award('streak', save.streak >= 3); award('vet', save.wins >= 10); award('daily', mode === 'daily');
+      earned.forEach(function (b) { extra.push(b.ic + ' Badge: ' + b.name); });
+      if (level() > before) extra.push('🚀 Level up! You are now ' + rank(level()) + ' (Lv ' + level() + ')');
+      persist(); renderProgress();
+      bannerEl.textContent = 'You found the number in ' + triesText() + '! Check your guesses on the right.';
+      $('popupText').textContent = 'You found the number in ' + triesText() + '.';
+      $('popupNumber').innerHTML = tiles(secret);
+      $('popupXp').textContent = '+' + gain + ' XP';
+      $('popupExtra').innerHTML = extra.join('<br>');
+      overlayEl.classList.add('show'); $('viewBtn').focus(); confetti();
+    } else {
+      save.streak = 0; persist(); renderProgress();
+      bannerEl.textContent = 'You gave up. The secret number is shown above. Try again!';
+      againBtn.focus();
+    }
+  }
+
+  function closePopup() { overlayEl.classList.remove('show'); againBtn.focus(); }
+  function openConfirm() { if (over) return; confirmEl.classList.add('show'); $('keepPlaying').focus(); }
+  function openRules() { rulesEl.classList.add('show'); $('startBtn').focus(); }
+  function closeRules() {
+    rulesEl.classList.remove('show');
+    var n = boxes.find(function (x) { return !x.value && !x.disabled; }); if (n) n.focus();
+  }
+  function closeConfirm() { confirmEl.classList.remove('show'); }
+
+  function confetti() {
+    var colors = ['#ff5fa2', '#ffc933', '#2fd6a1', '#4db8ff', '#7b5cff', '#ff8a3d'];
+    for (var i = 0; i < 60; i++) {
+      var s = document.createElement('span');
+      s.className = 'confetti';
+      s.style.left = Math.random() * 100 + 'vw'; s.style.background = colors[i % colors.length];
+      s.style.animationDuration = (2.4 + Math.random() * 2.4) + 's'; s.style.animationDelay = (Math.random() * 0.7) + 's';
+      document.body.appendChild(s);
+      setTimeout(function (el) { el.remove(); }.bind(null, s), 6000);
+    }
+  }
+
+  function startGame() {
+    secret = mode === 'daily' ? dailySecret() : randomSecret();
+    tries = 0; over = false; hintPos = [];
+    historyEl.innerHTML = ''; historyEl.appendChild(emptyEl); hintsEl.innerHTML = '';
+    countEl.textContent = '0'; countTextEl.textContent = '0 tries';
+    bannerEl.className = 'banner'; bannerEl.textContent = '';
+    overlayEl.classList.remove('show'); confirmEl.classList.remove('show');
+    digitsEl.classList.remove('revealed'); againBtn.hidden = true; msgEl.textContent = '';
+    setEnabled(true); clearBoxes(); renderProgress();
+  }
+
+  function setMode(m) {
+    mode = m;
+    $('modeRandom').setAttribute('aria-pressed', m === 'random');
+    $('modeDaily').setAttribute('aria-pressed', m === 'daily');
+    startGame();
+  }
+
+  guessBtn.addEventListener('click', submitGuess);
+  hintBtn.addEventListener('click', giveHint);
+  giveUpBtn.addEventListener('click', openConfirm);
+  $('yesQuit').addEventListener('click', function () { closeConfirm(); finish('lose'); });
+  $('keepPlaying').addEventListener('click', function () { closeConfirm(); var n = boxes.find(function (x) { return !x.value; }); (n || boxes[0]).focus(); });
+  againBtn.addEventListener('click', startGame);
+  $('rulesBtn').addEventListener('click', openRules);
+  $('startBtn').addEventListener('click', closeRules);
+  rulesEl.addEventListener('click', function (e) { if (e.target === rulesEl) closeRules(); });
+  $('popupAgainBtn').addEventListener('click', startGame);
+  $('viewBtn').addEventListener('click', closePopup);
+  $('modeRandom').addEventListener('click', function () { if (mode !== 'random') setMode('random'); });
+  $('modeDaily').addEventListener('click', function () { if (mode !== 'daily') setMode('daily'); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (confirmEl.classList.contains('show')) closeConfirm();
+    else if (overlayEl.classList.contains('show')) closePopup();
+    else if (rulesEl.classList.contains('show')) closeRules();
+  });
+
+  startGame();
+  openRules();   // show the rules every time the page opens
+})();
+</script>
+</body>
+</html>
