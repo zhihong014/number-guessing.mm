@@ -146,7 +146,7 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); ou
 .rules-popup li::marker { color: var(--pink); font-weight: 900; }
 .b-rules { background: rgba(255,255,255,.22); border: 2px solid rgba(255,255,255,.5); padding: 10px 16px; border-radius: 14px; }
 .b-rules:hover { background: rgba(255,255,255,.32); }
-a.btn { display: inline-block; text-decoration: none; color: #fff; }
+a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: center; }
 
 /* Popups */
 .overlay { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(25, 10, 70, .6); }
@@ -179,7 +179,7 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; }
       <div class="logo" aria-hidden="true">#</div>
       <div><h1>Numbering Guessing</h1><p>Crack the secret 4-digit code!</p></div>
     </div>
-    <a class="btn b-rules" id="homeLink" href="index.html">🏠 Home</a>
+    <button id="homeBtn" class="btn b-rules" type="button">🏠 Home</button>
     <button id="rulesBtn" class="btn b-rules" type="button">📋 Rules</button>
     <div class="level" aria-label="Your level">
       <div class="lrow"><span id="rank">Rookie</span><span id="lvl">Lv 1</span></div>
@@ -257,6 +257,16 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; }
   </div>
 </div>
 
+<div class="overlay" id="homeConfirm" role="alertdialog" aria-modal="true" aria-labelledby="homeTitle">
+  <div class="popup">
+    <div class="emoji">🏠</div>
+    <h2 id="homeTitle">Go back home?</h2>
+    <p>Your current round will end. Your level, XP and badges stay saved.</p>
+    <a id="yesHome" class="btn b-yes" href="index.html">Yes, go home</a>
+    <button id="stayBtn" class="btn b-keep" type="button">Stay here</button>
+  </div>
+</div>
+
 <div class="overlay" id="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
   <div class="popup">
     <div class="emoji">🏳️</div>
@@ -273,7 +283,7 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; }
   var digitsEl = $('digits'), msgEl = $('msg'), guessBtn = $('guessBtn'), hintBtn = $('hintBtn'), giveUpBtn = $('giveUpBtn');
   var againBtn = $('againBtn'), bannerEl = $('banner'), historyEl = $('history'), emptyEl = $('empty'), hintsEl = $('hints');
   var countEl = $('count'), countTextEl = $('countText');
-  var overlayEl = $('overlay'), confirmEl = $('confirm'), rulesEl = $('rulesPop');
+  var overlayEl = $('overlay'), confirmEl = $('confirm'), rulesEl = $('rulesPop'), homeEl = $('homeConfirm');
   var boxes = [], secret = '', tries = 0, over = false, mode = 'random', hintPos = [];
   var MAX_HINTS = 2, HINT_COST = 15;
 
@@ -429,6 +439,8 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; }
     rulesEl.classList.remove('show');
     var n = boxes.find(function (x) { return !x.value && !x.disabled; }); if (n) n.focus();
   }
+  function openHome() { homeEl.classList.add('show'); $('stayBtn').focus(); }
+  function closeHome() { homeEl.classList.remove('show'); var n = boxes.find(function (x) { return !x.value && !x.disabled; }); if (n) n.focus(); else $('homeBtn').focus(); }
   function closeConfirm() { confirmEl.classList.remove('show'); }
 
   function confetti() {
@@ -468,6 +480,9 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; }
   $('keepPlaying').addEventListener('click', function () { closeConfirm(); var n = boxes.find(function (x) { return !x.value; }); (n || boxes[0]).focus(); });
   againBtn.addEventListener('click', startGame);
   $('rulesBtn').addEventListener('click', openRules);
+  $('homeBtn').addEventListener('click', openHome);
+  $('stayBtn').addEventListener('click', closeHome);
+  homeEl.addEventListener('click', function (e) { if (e.target === homeEl) closeHome(); });
   $('startBtn').addEventListener('click', closeRules);
   rulesEl.addEventListener('click', function (e) { if (e.target === rulesEl) closeRules(); });
   $('popupAgainBtn').addEventListener('click', startGame);
@@ -476,7 +491,8 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; }
   $('modeDaily').addEventListener('click', function () { if (mode !== 'daily') setMode('daily'); });
   document.addEventListener('keydown', function (e) {
     if (e.key !== 'Escape') return;
-    if (confirmEl.classList.contains('show')) closeConfirm();
+    if (homeEl.classList.contains('show')) closeHome();
+    else if (confirmEl.classList.contains('show')) closeConfirm();
     else if (overlayEl.classList.contains('show')) closePopup();
     else if (rulesEl.classList.contains('show')) closeRules();
   });
