@@ -70,6 +70,13 @@ h1 { margin: 0; font-size: clamp(2.1rem, 9vw, 3rem); font-weight: 900; line-heig
 .btn .go { font-size: 1.3rem; }
 .btn.play { background: var(--pink); color: #fff; box-shadow: 0 5px 0 #d63a82; font-size: 1.25rem; padding: 18px 16px; }
 .btn.play:active { box-shadow: none; }
+/* Smaller 2 x 2 buttons */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.menu .btn.small { flex-direction: column; justify-content: center; gap: 2px; padding: 12px 6px; font-size: .95rem; text-align: center; box-shadow: 0 4px 0 #d6cdf5; }
+.menu .btn.small:active { box-shadow: none; }
+.btn.small .ic { font-size: 1.3rem; width: auto; }
+.btn.small .lbl { flex: none; }
+.btn.small .soon { font-size: .6rem; padding: 2px 8px; margin-top: 2px; }
 .btn.exit { background: #ffe1e7; color: #a02744; box-shadow: 0 5px 0 #f3b3c0; }
 .btn.exit:active { box-shadow: none; }
 .sep { height: 2px; background: #eee9fb; border-radius: 2px; margin: 2px 6px; }
@@ -89,11 +96,12 @@ h1 { margin: 0; font-size: clamp(2.1rem, 9vw, 3rem); font-weight: 900; line-heig
   <nav class="menu" aria-label="Main menu">
     <a class="btn play" href="singleplayer.html"><span class="ic">🎮</span><span class="lbl">Single player</span><span class="go" aria-hidden="true">▶</span></a>
     <button type="button" class="btn" aria-disabled="true"><span class="ic">👥</span><span class="lbl">Multiplayer</span><span class="soon">Soon</span></button>
-    <button type="button" class="btn" aria-disabled="true"><span class="ic">⚙️</span><span class="lbl">Setting</span><span class="soon">Soon</span></button>
-    <button type="button" class="btn" aria-disabled="true"><span class="ic">📋</span><span class="lbl">Rules</span><span class="soon">Soon</span></button>
-    <div class="sep" aria-hidden="true"></div>
-    <button type="button" class="btn" aria-disabled="true"><span class="ic">🏅</span><span class="lbl">Leaderboard</span><span class="soon">Soon</span></button>
-    <button type="button" class="btn" aria-disabled="true"><span class="ic">💬</span><span class="lbl">About</span><span class="soon">Soon</span></button>
+    <div class="grid2">
+      <button type="button" class="btn small" aria-disabled="true"><span class="ic">⚙️</span><span class="lbl">Setting</span><span class="soon">Soon</span></button>
+      <button type="button" class="btn small" aria-disabled="true"><span class="ic">📋</span><span class="lbl">Rules</span><span class="soon">Soon</span></button>
+      <button type="button" class="btn small" aria-disabled="true"><span class="ic">🏅</span><span class="lbl">Leaderboard</span><span class="soon">Soon</span></button>
+      <button type="button" class="btn small" aria-disabled="true"><span class="ic">💬</span><span class="lbl">About</span><span class="soon">Soon</span></button>
+    </div>
     <div class="sep" aria-hidden="true"></div>
     <button type="button" class="btn exit"><span class="ic">🚪</span><span class="lbl">Exit</span></button>
   </nav>
