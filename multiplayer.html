@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Numbering Guessing - Multiplayer</title>
+<style>
+/* =====================================================
+   EDIT ME: change the look of the multiplayer page here.
+   ===================================================== */
+:root {
+  --bg1: #5b3df5; --bg2: #1fa2ff;
+  --rim: #F5FDFF; --ink: #2a1f5c; --muted: #7a6fa8;
+  --pink: #ff5fa2; --yellow: #ffc933; --mint: #2fd6a1; --orange: #ff8a3d; --red: #ff4d6d;
+  --c1: #ffe08a; --c1d: #e0b43c; --c2: #ffb3d1; --c2d: #e0709f;
+  --c3: #9cf0d4; --c3d: #3fc79b; --c4: #a9dcff; --c4d: #5aa9e0;
+  --font: ui-rounded, "SF Pro Rounded", "Nunito", "Quicksand", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* ===================== end of EDIT ME ===================== */
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { min-height: 100vh; font-family: var(--font); color: var(--ink); padding: 22px 14px 60px;
+  background: repeating-linear-gradient(45deg, rgba(255,255,255,.06) 0 16px, transparent 16px 32px), linear-gradient(135deg, var(--bg1), var(--bg2)); background-attachment: fixed; }
+.wrap { max-width: 900px; margin: 0 auto; }
+button, input { font: inherit; }
+button { cursor: pointer; border: 0; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
+.hidden { display: none !important; }
+
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; color: #fff; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { width: 52px; height: 52px; border-radius: 17px; background: var(--yellow); color: var(--ink); display: grid; place-items: center; font-size: 1.6rem; font-weight: 900; box-shadow: 0 5px 0 #d99f00; transform: rotate(-6deg); }
+.brand h1 { margin: 0; font-size: clamp(1.4rem, 5vw, 2rem); font-weight: 900; line-height: 1; text-shadow: 0 3px 0 rgba(20,10,80,.35); }
+.brand p { margin: 4px 0 0; font-weight: 700; opacity: .9; }
+
+.card { background: #fff; border: 3px solid var(--rim); border-radius: 24px; padding: 20px; box-shadow: 0 8px 0 rgba(20,10,80,.28), 0 18px 30px rgba(20,10,80,.18); margin-bottom: 18px; }
+.card h2 { margin: 0 0 6px; font-size: 1.2rem; font-weight: 900; }
+.sub { margin: 0 0 14px; color: var(--muted); font-weight: 700; }
+.center { text-align: center; }
+
+.btn { display: inline-block; border-radius: 16px; padding: 14px 18px; font-weight: 900; font-size: 1rem; color: #fff; text-decoration: none; text-align: center; transition: transform .08s, box-shadow .08s; }
+.btn:active:not(:disabled) { transform: translateY(4px); box-shadow: none !important; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.b-pink { background: var(--pink); box-shadow: 0 5px 0 #d63a82; }
+.b-mint { background: var(--mint); color: #0b4a37; box-shadow: 0 5px 0 #1fa87e; }
+.b-violet { background: #7b5cff; box-shadow: 0 5px 0 #5b3df5; }
+.b-red { background: var(--red); box-shadow: 0 5px 0 #c92f4d; }
+.b-grey { background: #8b80c4; box-shadow: 0 5px 0 #6a5fa5; }
+.b-ghost { background: rgba(255,255,255,.22); border: 2px solid rgba(255,255,255,.5); padding: 10px 16px; border-radius: 14px; }
+.block { display: block; width: 100%; }
+.big { font-size: 1.2rem; padding: 18px; }
+.stack { display: grid; gap: 12px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1; }
+
+.field { display: block; margin-bottom: 14px; font-weight: 800; }
+.field input { display: block; width: 100%; margin-top: 6px; padding: 13px 14px; border: 3px solid #e2dbf8; border-radius: 14px; font-weight: 800; color: var(--ink); background: #faf8ff; }
+.field input:focus { border-color: #7b5cff; outline: none; }
+#codeIn { font-size: 1.8rem; letter-spacing: .3em; text-align: center; text-transform: uppercase; }
+.msg { min-height: 1.4em; margin: 8px 0; font-weight: 800; color: var(--red); text-align: center; }
+.info { font-weight: 800; color: var(--muted); text-align: center; margin: 10px 0; }
+
+.codebox { display: flex; gap: 8px; justify-content: center; margin: 8px 0 12px; }
+.codebox span { width: 52px; height: 64px; display: grid; place-items: center; border-radius: 16px; font-size: 2rem; font-weight: 900; }
+.codebox span:nth-child(5n+1), .tiles span:nth-child(4n+1), .bignum span:nth-child(4n+1) { background: var(--c1); }
+.codebox span:nth-child(5n+2), .tiles span:nth-child(4n+2), .bignum span:nth-child(4n+2) { background: var(--c2); }
+.codebox span:nth-child(5n+3), .tiles span:nth-child(4n+3), .bignum span:nth-child(4n+3) { background: var(--c3); }
+.codebox span:nth-child(5n+4), .tiles span:nth-child(4n+4), .bignum span:nth-child(4n+4) { background: var(--c4); }
+.codebox span:nth-child(5n+5) { background: #d9ccff; }
+.linkrow { display: flex; gap: 8px; }
+.linkrow input { flex: 1; min-width: 0; padding: 10px 12px; border: 3px solid #e2dbf8; border-radius: 12px; font-weight: 700; color: var(--muted); background: #faf8ff; }
+
+.players { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+.pl { background: #f3efff; border-radius: 16px; padding: 12px; text-align: center; font-weight: 900; }
+.pl small { display: block; color: var(--muted); font-weight: 800; text-transform: uppercase; font-size: .7rem; letter-spacing: .06em; }
+.pl.wait { opacity: .6; }
+.modes { display: flex; gap: 6px; background: #efeaff; border-radius: 16px; padding: 5px; margin: 6px 0; }
+.modes button { flex: 1; padding: 10px; border-radius: 12px; background: transparent; color: var(--muted); font-weight: 900; }
+.modes button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 3px 0 #d6cdf5; }
+.modes button:disabled { cursor: default; }
+
+/* Scoreboard */
+.board { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--rim); border-radius: 24px; padding: 12px 16px; margin-bottom: 18px; box-shadow: 0 8px 0 rgba(20,10,80,.28); }
+.side { text-align: center; } .side small { display: block; font-weight: 800; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side b { font-size: 2.4rem; font-weight: 900; line-height: 1; }
+.side.me b { color: #5b3df5; } .side.opp b { color: var(--pink); }
+.mid { text-align: center; font-weight: 900; } .mid small { display: block; color: var(--muted); font-weight: 800; }
+
+/* RPS */
+.rps { display: flex; gap: 12px; justify-content: center; margin: 16px 0; }
+.rps button { width: 96px; height: 96px; font-size: 3rem; border-radius: 24px; background: #f3efff; box-shadow: 0 6px 0 #d6cdf5; }
+.rps button.on { background: var(--yellow); box-shadow: 0 6px 0 #d99f00; }
+.rps button:disabled { opacity: .55; cursor: default; }
+
+/* Digit boxes */
+.digits { display: flex; gap: 10px; justify-content: center; margin: 14px 0 6px; }
+.digits input { width: 100%; max-width: 78px; height: 84px; font-size: 2.4rem; font-weight: 900; text-align: center; color: var(--ink); border: 0; border-radius: 20px; outline: none; caret-color: transparent; transition: transform .12s; }
+.digits input:nth-child(1) { background: var(--c1); box-shadow: 0 6px 0 var(--c1d); }
+.digits input:nth-child(2) { background: var(--c2); box-shadow: 0 6px 0 var(--c2d); }
+.digits input:nth-child(3) { background: var(--c3); box-shadow: 0 6px 0 var(--c3d); }
+.digits input:nth-child(4) { background: var(--c4); box-shadow: 0 6px 0 var(--c4d); }
+.digits input:focus { transform: translateY(-4px) scale(1.05); }
+.digits input:disabled { opacity: .7; -webkit-text-fill-color: var(--ink); }
+.digits.shake { animation: shake .4s; }
+@keyframes shake { 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+.turn { text-align: center; font-weight: 900; font-size: 1.15rem; padding: 10px; border-radius: 16px; margin-bottom: 8px; }
+.turn.me { background: #d6f8ec; color: #0b6b4a; } .turn.opp { background: #ffe1e7; color: #a02744; }
+.mynum { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; color: var(--muted); margin: 6px 0; }
+
+/* Histories */
+.hists { display: grid; gap: 14px; grid-template-columns: 1fr; margin-top: 14px; }
+@media (min-width: 640px) { .hists { grid-template-columns: 1fr 1fr; } }
+.hist h3 { margin: 0 0 8px; font-size: 1rem; font-weight: 900; } .hist h3 small { color: var(--muted); font-weight: 800; }
+.hist ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; max-height: 300px; overflow-y: auto; }
+.hist li { display: grid; grid-template-columns: 28px 1fr 30px; align-items: center; gap: 8px; background: #f6f3ff; border-radius: 14px; padding: 7px 10px; }
+.hist li.empty { display: block; background: transparent; border: 3px dashed #ddd6f5; color: var(--muted); font-weight: 800; text-align: center; padding: 14px 6px; }
+.hist .no { color: var(--muted); font-weight: 900; font-size: .8rem; } .hist .sc { font-weight: 900; font-size: 1.2rem; text-align: center; }
+.tiles { display: flex; gap: 4px; } .tiles span { width: 28px; height: 34px; display: grid; place-items: center; border-radius: 9px; font-weight: 900; }
+
+/* Popups */
+.overlay { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(25,10,70,.6); }
+.overlay.show { display: flex; }
+.popup { width: 100%; max-width: 400px; max-height: 92vh; overflow-y: auto; text-align: center; background: #fff; border: 3px solid var(--rim); border-radius: 30px; padding: 26px 20px 20px; box-shadow: 0 10px 0 rgba(20,10,80,.3), 0 30px 60px rgba(0,0,0,.35); animation: pop .4s cubic-bezier(.2,1.4,.4,1); }
+@keyframes pop { from { transform: scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+.popup .emoji { font-size: 3.2rem; line-height: 1; } .popup h2 { margin: 8px 0 4px; font-size: 1.7rem; color: var(--pink); }
+.popup p { margin: 4px 0; color: var(--muted); font-weight: 800; } .popup .btn { margin-top: 10px; }
+.bignum { display: flex; gap: 6px; justify-content: center; margin: 6px 0 10px; } .bignum span { width: 46px; height: 56px; display: grid; place-items: center; border-radius: 14px; font-size: 1.8rem; font-weight: 900; }
+.lbl { font-weight: 900; font-size: .85rem; color: var(--muted); margin-top: 8px; }
+.warn { background: #fff2c2; border-radius: 14px; padding: 10px; font-weight: 800; color: #8a5a00; margin-top: 8px; }
+.score2 { font-size: 1.6rem; font-weight: 900; margin: 8px 0; }
+.confetti { position: fixed; top: -20px; width: 10px; height: 16px; border-radius: 3px; pointer-events: none; animation: fall linear forwards; z-index: 30; }
+@keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="logo" aria-hidden="true">#</div><div><h1>Multiplayer</h1><p>1 vs 1 number duel</p></div></div>
+    <button id="leaveBtn" class="btn b-ghost" type="button">🏠 Menu</button>
+  </header>
+
+  <!-- 1. Multiplayer main page -->
+  <section id="sMenu" class="card" aria-label="Multiplayer menu">
+    <h2>Play with a friend online</h2>
+    <p class="sub">Create a room and send the code, or enter a code you received.</p>
+    <label class="field">Your name<input id="nameIn" maxlength="12" placeholder="Player" autocomplete="off"></label>
+    <div class="stack">
+      <button id="hostBtn" class="btn b-pink block big" type="button">🏠 Host game</button>
+      <button id="joinBtn" class="btn b-violet block big" type="button">🔑 Join game</button>
+    </div>
+    <p class="msg" id="menuMsg" aria-live="polite"></p>
+  </section>
+
+  <!-- Join screen -->
+  <section id="sJoin" class="card hidden" aria-label="Join game">
+    <h2>Join a game</h2>
+    <p class="sub">Enter the 5-character invitation code from your friend.</p>
+    <label class="field">Invitation code<input id="codeIn" maxlength="5" placeholder="XXXXX" autocomplete="off" autocapitalize="characters"></label>
+    <div class="row"><button id="joinGo" class="btn b-violet" type="button">Join room</button><button id="joinBack" class="btn b-grey" type="button">Back</button></div>
+    <p class="msg" id="joinMsg" aria-live="polite"></p>
+  </section>
+
+  <!-- Room / lobby -->
+  <section id="sRoom" class="card hidden" aria-label="Room">
+    <div id="hostOnly">
+      <h2 class="center">Invitation code</h2>
+      <div class="codebox" id="codeTiles" aria-label="Invitation code"></div>
+      <div class="row"><button id="copyCode" class="btn b-violet" type="button">Copy code</button><button id="copyLink" class="btn b-mint" type="button">Copy invite link</button></div>
+      <div class="linkrow" style="margin-top:10px"><input id="linkOut" readonly aria-label="Invite link"></div>
+    </div>
+    <div class="players">
+      <div class="pl"><small>You</small><span id="plMe">Player</span></div>
+      <div class="pl wait" id="plOppBox"><small>Opponent</small><span id="plOpp">Waiting…</span></div>
+    </div>
+    <h2>Game method</h2>
+    <p class="sub" id="goalText">Best of 3 rounds. First to 2 points wins.</p>
+    <div class="modes" id="roundSeg" role="group" aria-label="Number of rounds">
+      <button type="button" data-r="1">1 round</button><button type="button" data-r="3">3 rounds</button><button type="button" data-r="5">5 rounds</button>
+    </div>
+    <p class="info" id="roomInfo" aria-live="polite"></p>
+    <button id="startBtn" class="btn b-pink block big" type="button">Start game</button>
+  </section>
+
+  <!-- Game -->
+  <section id="sGame" class="hidden" aria-label="Game">
+    <div class="board">
+      <div class="side me"><small id="bMe">You</small><b id="myPts">0</b></div>
+      <div class="mid"><span id="roundLbl">Round 1 of 3</span><small id="goalLbl">First to 2</small></div>
+      <div class="side opp"><small id="bOpp">Opponent</small><b id="oppPts">0</b></div>
+    </div>
+
+    <div class="card center hidden" id="pRps">
+      <h2>✊ ✋ ✌️ Rock Paper Scissors</h2>
+      <p class="sub">The winner guesses first.</p>
+      <div class="rps" id="rpsBtns">
+        <button type="button" data-c="r" aria-label="Rock">✊</button><button type="button" data-c="p" aria-label="Paper">✋</button><button type="button" data-c="s" aria-label="Scissors">✌️</button>
+      </div>
+      <p class="info" id="rpsInfo" aria-live="polite">Pick one!</p>
+    </div>
+
+    <div class="card center hidden" id="pSet">
+      <h2>Choose your secret number</h2>
+      <p class="sub">4 digits, it can start with 0. Your opponent will try to guess it.</p>
+      <div class="digits" id="setBoxes" role="group" aria-label="Your secret number"></div>
+      <p class="msg" id="setMsg" aria-live="polite"></p>
+      <button id="lockBtn" class="btn b-pink block" type="button">🔒 Lock in my number</button>
+      <p class="info" id="setInfo" aria-live="polite"></p>
+    </div>
+
+    <div class="card hidden" id="pPlay">
+      <div class="turn" id="turnBox" aria-live="polite">Your turn</div>
+      <div class="mynum">Your secret number: <span class="tiles" id="myNumTiles"></span></div>
+      <div class="digits" id="guessBoxes" role="group" aria-label="Your guess"></div>
+      <p class="msg" id="guessMsg" aria-live="polite"></p>
+      <div class="row"><button id="guessBtn" class="btn b-pink" type="button" style="flex:2">Guess! ✨</button><button id="surBtn" class="btn b-grey" type="button">Give up round</button></div>
+      <div class="hists">
+        <div class="hist"><h3>🎯 My guesses <small>(opponent’s number)</small></h3><ul id="histMine"></ul></div>
+        <div class="hist"><h3>👀 Opponent’s guesses <small>(my number)</small></h3><ul id="histOpp"></ul></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Round result -->
+<div class="overlay" id="roundOv" role="dialog" aria-modal="true" aria-labelledby="roundTitle">
+  <div class="popup">
+    <div class="emoji" id="roundEmoji">🎯</div><h2 id="roundTitle"></h2><p id="roundText"></p>
+    <div class="lbl">Your number</div><div class="bignum" id="roundMine"></div>
+    <div class="lbl" id="roundOppLbl">Opponent’s number</div><div class="bignum" id="roundOppNum"></div>
+    <div class="score2" id="roundScore"></div>
+    <div class="warn hidden" id="roundWarn">⚠️ The opponent’s answers did not match their revealed number. They may have cheated.</div>
+    <button id="nextBtn" class="btn b-pink block" type="button">Next round</button>
+  </div>
+</div>
+<!-- Match result -->
+<div class="overlay" id="matchOv" role="dialog" aria-modal="true" aria-labelledby="matchTitle">
+  <div class="popup">
+    <div class="emoji" id="matchEmoji">🏆</div><h2 id="matchTitle"></h2><p id="matchText"></p>
+    <div class="score2" id="matchScore"></div>
+    <a class="btn b-violet block" href="multiplayer.html">Multiplayer menu</a>
+    <a class="btn b-mint block" href="index.html">Main menu</a>
+  </div>
+</div>
+<!-- Generic confirm -->
+<div class="overlay" id="askOv" role="alertdialog" aria-modal="true" aria-labelledby="askTitle">
+  <div class="popup">
+    <div class="emoji">❓</div><h2 id="askTitle"></h2><p id="askText"></p>
+    <button id="askYes" class="btn b-red block" type="button">Yes</button>
+    <button id="askNo" class="btn b-mint block" type="button">Cancel</button>
+  </div>
+</div>
+<!-- Opponent left / errors -->
+<div class="overlay" id="goneOv" role="alertdialog" aria-modal="true" aria-labelledby="goneTitle">
+  <div class="popup">
+    <div class="emoji">🔌</div><h2 id="goneTitle">Opponent left</h2><p id="goneText">The connection was closed, so the match has ended.</p>
+    <a class="btn b-violet block" href="multiplayer.html">Multiplayer menu</a>
+    <a class="btn b-mint block" href="index.html">Main menu</a>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var PREFIX = 'ngmp-', ALPHA = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+  var peer = null, conn = null, S = { phase: 'menu', role: '', rounds: 3, code: '', myName: 'Player', oppName: 'Opponent' };
+  var EMO = { r: '✊', p: '✋', s: '✌️' }, BEATS = { r: 's', p: 'r', s: 'p' };
+
+  /* ---------- small helpers ---------- */
+  function show(id) { ['sMenu', 'sJoin', 'sRoom', 'sGame'].forEach(function (x) { $(x).classList.toggle('hidden', x !== id); }); }
+  function panel(id) { ['pRps', 'pSet', 'pPlay'].forEach(function (x) { $(x).classList.toggle('hidden', x !== id); }); }
+  function tiles(str) { return String(str).split('').map(function (d) { return '<span>' + d + '</span>'; }).join(''); }
+  function score(g, secret) { var n = 0; for (var i = 0; i < 4; i++) if (g[i] === secret[i]) n++; return n; }
+  function need() { return (S.rounds + 1) / 2; }
+  function rand(n) { var a = new Uint8Array(n); (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.floor(Math.random() * 256); }); return a; }
+  function genCode() { var a = rand(5), s = ''; for (var i = 0; i < 5; i++) s += ALPHA[a[i] % ALPHA.length]; return s; }
+  function sha(text) {
+    try { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
+    catch (e) { return Promise.resolve(''); }
+  }
+  function getName() { var n = $('nameIn').value.trim().slice(0, 12); return n || 'Player'; }
+  function send(o) { if (conn && conn.open) conn.send(o); }
+  function ask(title, text, yesLabel, onYes) {
+    $('askTitle').textContent = title; $('askText').textContent = text; $('askYes').textContent = yesLabel;
+    $('askYes').onclick = function () { $('askOv').classList.remove('show'); onYes(); };
+    $('askOv').classList.add('show'); $('askNo').focus();
+  }
+  function confetti() {
+    var colors = ['#ff5fa2', '#ffc933', '#2fd6a1', '#4db8ff', '#7b5cff', '#ff8a3d'];
+    for (var i = 0; i < 60; i++) {
+      var s = document.createElement('span'); s.className = 'confetti';
+      s.style.left = Math.random() * 100 + 'vw'; s.style.background = colors[i % colors.length];
+      s.style.animationDuration = (2.4 + Math.random() * 2.4) + 's'; s.style.animationDelay = (Math.random() * .7) + 's';
+      document.body.appendChild(s); setTimeout(function (el) { el.remove(); }.bind(null, s), 6000);
+    }
+  }
+  try { $('nameIn').value = localStorage.getItem('ng-mp-name') || ''; } catch (e) {}
+  $('nameIn').addEventListener('input', function () { try { localStorage.setItem('ng-mp-name', $('nameIn').value); } catch (e) {} });
+
+  /* ---------- digit boxes ---------- */
+  function makeBoxes(el, onEnter) {
+    var boxes = [];
+    for (var i = 0; i < 4; i++) { var b = document.createElement('input'); b.type = 'text'; b.inputMode = 'numeric'; b.maxLength = 1; b.autocomplete = 'off'; b.setAttribute('aria-label', 'Digit ' + (i + 1)); el.appendChild(b); boxes.push(b); }
+    boxes.forEach(function (box, i) {
+      box.addEventListener('input', function () { box.value = box.value.replace(/\D/g, '').slice(-1); if (box.value && i < 3) boxes[i + 1].focus(); });
+      box.addEventListener('keydown', function (e) {
+        if (e.key === 'Backspace' && !box.value && i > 0) { boxes[i - 1].focus(); boxes[i - 1].value = ''; e.preventDefault(); }
+        else if (e.key === 'ArrowLeft' && i > 0) boxes[i - 1].focus(); else if (e.key === 'ArrowRight' && i < 3) boxes[i + 1].focus();
+        else if (e.key === 'Enter') onEnter();
+      });
+      box.addEventListener('focus', function () { box.select(); });
+      box.addEventListener('paste', function (e) {
+        var t = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4); if (!t) return; e.preventDefault();
+        for (var k = 0; k < 4; k++) boxes[k].value = t[k] || ''; boxes[Math.min(t.length, 3)].focus();
+      });
+    });
+    return {
+      get: function () { return boxes.map(function (x) { return x.value; }).join(''); },
+      clear: function () { boxes.forEach(function (x) { x.value = ''; }); },
+      focus: function () { var n = boxes.find(function (x) { return !x.value; }) || boxes[0]; n.focus(); },
+      enable: function (on) { boxes.forEach(function (x) { x.disabled = !on; }); },
+      shake: function () { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
+    };
+  }
+  var setBox = makeBoxes($('setBoxes'), function () { lockNumber(); });
+  var guessBox = makeBoxes($('guessBoxes'), function () { submitGuess(); });
+
+  /* ---------- connection ---------- */
+  function closePeer() { try { if (conn) conn.close(); } catch (e) {} try { if (peer) peer.destroy(); } catch (e) {} conn = null; peer = null; }
+  function libOk() { if (typeof Peer === 'undefined') { $('menuMsg').textContent = 'The connection library could not load. Check your internet and refresh the page.'; return false; } return true; }
+
+  function hostGame(tryNo) {
+    if (!libOk()) return;
+    S.role = 'host'; S.myName = getName(); S.rounds = S.rounds || 3; closePeer();
+    var code = genCode(), p = new Peer(PREFIX + code); peer = p;
+    p.on('open', function () { if (p !== peer) return; S.code = code; S.oppName = ''; S.phase = 'room'; show('sRoom'); renderRoom(); });
+    p.on('connection', function (c) {
+      if (p !== peer) return;
+      if (conn) { c.on('open', function () { c.send({ t: 'full' }); setTimeout(function () { c.close(); }, 300); }); return; }
+      conn = c; bindConn(c);
+    });
+    p.on('error', function (e) {
+      if (p !== peer) return;
+      if (e.type === 'unavailable-id' && (tryNo || 0) < 5) return hostGame((tryNo || 0) + 1);
+      $('menuMsg').textContent = 'Could not create the room (' + e.type + '). Please try again.'; if (S.phase !== 'menu') showGone('Connection problem', 'The room connection failed (' + e.type + ').');
+    });
+  }
+
+  function joinGame(code) {
+    if (!libOk()) { show('sMenu'); return; }
+    S.role = 'guest'; S.myName = getName(); closePeer(); $('joinMsg').textContent = 'Connecting…';
+    var p = new Peer(); peer = p;
+    S.timer = setTimeout(function () { if (S.phase === 'menu') { $('joinMsg').textContent = 'Could not connect. Check the code. Some strict networks (school, office) block direct connections.'; closePeer(); } }, 20000);
+    p.on('open', function () {
+      if (p !== peer) return;
+      var c = p.connect(PREFIX + code, { reliable: true }); conn = c; bindConn(c);
+      c.on('open', function () { send({ t: 'hello', name: S.myName }); });
+    });
+    p.on('error', function (e) {
+      if (p !== peer) return; clearTimeout(S.timer);
+      $('joinMsg').textContent = e.type === 'peer-unavailable' ? 'Room not found. Check the code and try again.' : 'Connection problem (' + e.type + '). Please try again.';
+    });
+  }
+
+  function bindConn(c) {
+    c.on('data', function (m) { if (c === conn && m && typeof m === 'object') onData(m); });
+    c.on('close', function () { if (c === conn) opponentLeft(); });
+    c.on('error', function () {});
+  }
+  function opponentLeft() {
+    if (S.phase === 'ended') return;
+    if (S.phase === 'room' && S.role === 'host') { S.oppName = ''; conn = null; renderRoom(); return; }   // host keeps room open
+    showGone('Opponent left', 'The connection was closed, so the match has ended.');
+  }
+  function showGone(t, x) { $('goneTitle').textContent = t; $('goneText').textContent = x; ['roundOv', 'matchOv', 'askOv'].forEach(function (i) { $(i).classList.remove('show'); }); $('goneOv').classList.add('show'); S.phase = 'ended'; }
+
+  function onData(m) {
+    switch (m.t) {
+      case 'hello': if (S.role === 'host') { S.oppName = String(m.name || 'Guest').slice(0, 12); send({ t: 'settings', name: S.myName, rounds: S.rounds }); renderRoom(); } break;
+      case 'settings': if (S.role === 'guest') { clearTimeout(S.timer); S.oppName = String(m.name || 'Host').slice(0, 12); if ([1, 3, 5].indexOf(m.rounds) >= 0) S.rounds = m.rounds; if (S.phase === 'menu') S.phase = 'room'; show('sRoom'); renderRoom(); } break;
+      case 'full': $('joinMsg').textContent = 'This room already has two players.'; closePeer(); break;
+      case 'start': if (S.role === 'guest' && S.phase === 'room') beginMatch(); break;
+      case 'rps': if (S.phase === 'rps' && EMO[m.c]) { S.oppRps = m.c; resolveRps(); } break;
+      case 'ready': S.oppReady = true; S.oppCommit = String(m.commit || ''); maybeStartPlay(); break;
+      case 'guess': handleGuess(m); break;
+      case 'result': handleResult(m); break;
+      case 'surrender': if (S.phase === 'play' && !S.roundOver) endRound('me', 'surrender'); break;
+      case 'reveal': if (/^\d{4}$/.test(String(m.secret))) { S.oppReveal = { secret: String(m.secret), salt: String(m.salt || '') }; verifyOpp(); } break;
+      case 'next': S.oppNext = true; maybeNext(); break;
+    }
+  }
+
+  /* ---------- menu / join / room ---------- */
+  $('hostBtn').addEventListener('click', function () { $('menuMsg').textContent = ''; hostGame(0); });
+  $('joinBtn').addEventListener('click', function () { $('joinMsg').textContent = ''; show('sJoin'); $('codeIn').focus(); });
+  $('joinBack').addEventListener('click', function () { clearTimeout(S.timer); closePeer(); show('sMenu'); });
+  $('codeIn').addEventListener('input', function () { $('codeIn').value = $('codeIn').value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5); });
+  $('codeIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('joinGo').click(); });
+  $('joinGo').addEventListener('click', function () {
+    var code = $('codeIn').value.trim().toUpperCase();
+    if (code.length !== 5) { $('joinMsg').textContent = 'Enter the 5-character code.'; return; }
+    joinGame(code);
+  });
+  var qs = (location.search.match(/[?&]join=([A-Za-z0-9]{5})/) || [])[1];
+  if (qs) { $('codeIn').value = qs.toUpperCase(); show('sJoin'); }
+
+  function inviteLink() { return location.href.split('?')[0].split('#')[0] + '?join=' + S.code; }
+  function copy(text, btn, label) {
+    var done = function (ok) { btn.textContent = ok ? 'Copied!' : 'Press and hold to copy'; setTimeout(function () { btn.textContent = label; }, 1800); };
+    try { navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); }); } catch (e) { done(false); }
+  }
+  $('copyCode').addEventListener('click', function () { copy(S.code, $('copyCode'), 'Copy code'); });
+  $('copyLink').addEventListener('click', function () { copy(inviteLink(), $('copyLink'), 'Copy invite link'); });
+  $('linkOut').addEventListener('focus', function () { $('linkOut').select(); });
+  $('roundSeg').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b || S.role !== 'host' || S.phase !== 'room') return;
+    S.rounds = parseInt(b.dataset.r, 10); send({ t: 'settings', name: S.myName, rounds: S.rounds }); renderRoom();
+  });
+  $('startBtn').addEventListener('click', function () { if (S.role === 'host' && S.oppName && conn && conn.open) { send({ t: 'start' }); beginMatch(); } });
+
+  function renderRoom() {
+    var host = S.role === 'host';
+    $('hostOnly').classList.toggle('hidden', !host);
+    if (host) { $('codeTiles').innerHTML = tiles(S.code); $('linkOut').value = inviteLink(); }
+    $('plMe').textContent = S.myName; $('plOpp').textContent = S.oppName || 'Waiting…'; $('plOppBox').classList.toggle('wait', !S.oppName);
+    $('goalText').textContent = 'Best of ' + S.rounds + ' round' + (S.rounds > 1 ? 's' : '') + '. First to ' + need() + ' point' + (need() > 1 ? 's' : '') + ' wins.';
+    Array.prototype.forEach.call($('roundSeg').children, function (b) { b.setAttribute('aria-pressed', String(parseInt(b.dataset.r, 10) === S.rounds)); b.disabled = !host; });
+    $('startBtn').classList.toggle('hidden', !host); $('startBtn').disabled = !S.oppName;
+    $('roomInfo').textContent = host ? (S.oppName ? S.oppName + ' joined! Press Start when you are ready.' : 'Send the code or link to your friend and wait for them to join.') : 'Connected! Waiting for the host to start the game…';
+  }
+
+  /* ---------- match flow ---------- */
+  function resetRound() {
+    S.secret = ''; S.salt = ''; S.myCommit = ''; S.oppCommit = ''; S.myReady = false; S.sentReady = false; S.oppReady = false;
+    S.myGuesses = []; S.oppGuesses = []; S.awaiting = false; S.pending = ''; S.roundOver = false; S.roundWinner = ''; S.how = '';
+    S.oppReveal = null; S.oppVerified = null; S.myNext = false; S.oppNext = false; S.turn = '';
+  }
+  function beginMatch() {
+    S.myPts = 0; S.oppPts = 0; S.round = 1; S.matchOver = false; S.myRps = ''; S.oppRps = ''; S.rpsWinner = '';
+    resetRound(); S.phase = 'rps'; show('sGame'); renderGame();
+  }
+
+  function renderGame() {
+    $('bMe').textContent = S.myName + ' (you)'; $('bOpp').textContent = S.oppName || 'Opponent';
+    $('myPts').textContent = S.myPts; $('oppPts').textContent = S.oppPts;
+    $('roundLbl').textContent = 'Round ' + S.round + ' of ' + S.rounds; $('goalLbl').textContent = 'First to ' + need();
+    if (S.phase === 'rps') {
+      panel('pRps');
+      Array.prototype.forEach.call($('rpsBtns').children, function (b) { b.classList.toggle('on', S.myRps === b.dataset.c); b.disabled = !!S.myRps; });
+    } else if (S.phase === 'set') {
+      panel('pSet'); setBox.enable(!S.myReady); $('lockBtn').disabled = S.myReady;
+      $('setInfo').textContent = S.myReady ? (S.oppReady ? 'Starting…' : 'Locked! Waiting for ' + (S.oppName || 'your opponent') + ' to choose a number…') : (S.oppReady ? S.oppName + ' is ready and waiting for you.' : '');
+      if (!S.myReady) setBox.focus();
+    } else if (S.phase === 'play') {
+      panel('pPlay'); $('myNumTiles').innerHTML = tiles(S.secret);
+      var mine = S.turn === 'me' && !S.roundOver && !S.awaiting;
+      $('turnBox').className = 'turn ' + (S.turn === 'me' ? 'me' : 'opp');
+      $('turnBox').textContent = S.roundOver ? 'Round finished' : S.turn === 'me' ? (S.awaiting ? 'Waiting for the answer…' : 'Your turn: guess ' + (S.oppName || 'the opponent') + '’s number') : S.oppName + ' is guessing…';
+      guessBox.enable(mine); $('guessBtn').disabled = !mine; $('surBtn').disabled = S.roundOver;
+      renderHist($('histMine'), S.myGuesses); renderHist($('histOpp'), S.oppGuesses);
+      if (mine) guessBox.focus();
+    }
+  }
+  function renderHist(ul, arr) {
+    if (!arr.length) { ul.innerHTML = '<li class="empty">No guesses yet</li>'; return; }
+    ul.innerHTML = arr.map(function (x, i) { return { x: x, i: i }; }).reverse().map(function (o) {
+      return '<li><span class="no">#' + (o.i + 1) + '</span><span class="tiles">' + tiles(o.x.g) + '</span><span class="sc">' + o.x.s + '</span></li>';
+    }).join('');
+  }
+
+  /* Rock paper scissors */
+  $('rpsBtns').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b || S.phase !== 'rps' || S.myRps) return;
+    S.myRps = b.dataset.c; send({ t: 'rps', c: S.myRps }); $('rpsInfo').textContent = 'Waiting for ' + (S.oppName || 'opponent') + '…'; renderGame(); resolveRps();
+  });
+  function resolveRps() {
+    if (!(S.myRps && S.oppRps)) return;
+    var me = S.myRps, op = S.oppRps; S.myRps = ''; S.oppRps = '';
+    if (me === op) { $('rpsInfo').textContent = 'Both chose ' + EMO[me] + ' — a tie! Pick again.'; renderGame(); return; }
+    S.rpsWinner = BEATS[me] === op ? 'me' : 'opp';
+    $('rpsInfo').textContent = 'You ' + EMO[me] + ' vs ' + EMO[op] + ' ' + S.oppName + ' — ' + (S.rpsWinner === 'me' ? 'you win and guess first!' : S.oppName + ' wins and guesses first.');
+    Array.prototype.forEach.call($('rpsBtns').children, function (b) { b.disabled = true; });
+    setTimeout(function () { if (S.phase === 'rps') { S.phase = 'set'; renderGame(); } }, 2000);
+  }
+
+  /* Secret number */
+  $('lockBtn').addEventListener('click', lockNumber);
+  function lockNumber() {
+    if (S.phase !== 'set' || S.myReady) return;
+    var n = setBox.get();
+    if (!/^\d{4}$/.test(n)) { $('setMsg').textContent = 'Enter exactly 4 digits (for example 0612).'; setBox.shake(); setBox.focus(); return; }
+    $('setMsg').textContent = ''; S.secret = n; S.salt = Array.prototype.map.call(rand(8), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); S.myReady = true; setBox.enable(false); $('lockBtn').disabled = true;
+    sha(S.secret + ':' + S.salt).then(function (h) { S.myCommit = h; S.sentReady = true; send({ t: 'ready', commit: h }); renderGame(); maybeStartPlay(); });
+  }
+  function maybeStartPlay() {
+    if (S.phase === 'set' && S.myReady && S.sentReady && S.oppReady && S.secret) {
+      var base = S.rpsWinner, other = base === 'me' ? 'opp' : 'me';
+      S.turn = (S.round % 2 === 1) ? base : other; S.phase = 'play'; guessBox.clear(); renderGame();
+    }
+  }
+
+  /* Guessing */
+  $('guessBtn').addEventListener('click', submitGuess);
+  function submitGuess() {
+    if (S.phase !== 'play' || S.turn !== 'me' || S.awaiting || S.roundOver) return;
+    var g = guessBox.get();
+    if (!/^\d{4}$/.test(g)) { $('guessMsg').textContent = 'Enter all 4 digits (for example 0023).'; guessBox.shake(); guessBox.focus(); return; }
+    $('guessMsg').textContent = ''; S.awaiting = true; S.pending = g; send({ t: 'guess', g: g }); guessBox.clear(); renderGame();
+  }
+  function handleGuess(m) {
+    if (S.phase !== 'play' || S.turn !== 'opp' || S.roundOver || !/^\d{4}$/.test(String(m.g))) return;
+    var s = score(m.g, S.secret); S.oppGuesses.push({ g: m.g, s: s }); send({ t: 'result', s: s });
+    if (s === 4) endRound('opp', 'guessed'); else { S.turn = 'me'; renderGame(); }
+  }
+  function handleResult(m) {
+    if (!S.awaiting || !(m.s >= 0 && m.s <= 4)) return;
+    S.myGuesses.push({ g: S.pending, s: m.s }); S.awaiting = false;
+    if (m.s === 4) endRound('me', 'guessed'); else { S.turn = 'opp'; renderGame(); }
+  }
+  $('surBtn').addEventListener('click', function () {
+    if (S.roundOver) return;
+    ask('Give up this round?', S.oppName + ' will get the point for this round.', 'Yes, give up', function () { if (!S.roundOver && S.phase === 'play') { send({ t: 'surrender' }); endRound('opp', 'surrender'); } });
+  });
+
+  /* Round end */
+  function endRound(winner, how) {
+    S.roundOver = true; S.roundWinner = winner; S.how = how;
+    if (winner === 'me') S.myPts++; else S.oppPts++;
+    S.matchOver = (winner === 'me' ? S.myPts : S.oppPts) >= need();
+    send({ t: 'reveal', secret: S.secret, salt: S.salt });
+    renderGame(); renderRound(); $('roundOv').classList.add('show');
+  }
+  function verifyOpp() {
+    var r = S.oppReveal; if (!r) return;
+    var check = S.oppCommit ? sha(r.secret + ':' + r.salt) : Promise.resolve(null);
+    check.then(function (h) {
+      var ok = true;
+      if (h !== null && h !== '' && h !== S.oppCommit) ok = false;
+      S.myGuesses.forEach(function (x) { if (score(x.g, r.secret) !== x.s) ok = false; });
+      S.oppVerified = ok; renderRound();
+    });
+  }
+  function renderRound() {
+    var won = S.roundWinner === 'me', tries = won ? S.myGuesses.length : S.oppGuesses.length;
+    $('roundEmoji').textContent = won ? '🎉' : '😮'; $('roundTitle').textContent = won ? 'You won round ' + S.round + '!' : S.oppName + ' won round ' + S.round;
+    $('roundText').textContent = S.how === 'surrender' ? (won ? S.oppName + ' gave up this round.' : 'You gave up this round.') : (won ? 'You found the number in ' : S.oppName + ' found your number in ') + tries + (tries === 1 ? ' try.' : ' tries.');
+    $('roundMine').innerHTML = tiles(S.secret);
+    $('roundOppNum').innerHTML = S.oppReveal ? tiles(S.oppReveal.secret) : '<span>?</span><span>?</span><span>?</span><span>?</span>';
+    $('roundScore').textContent = S.myName + ' ' + S.myPts + ' - ' + S.oppPts + ' ' + S.oppName;
+    $('roundWarn').classList.toggle('hidden', S.oppVerified !== false);
+    $('nextBtn').textContent = S.matchOver ? 'See final result' : (S.myNext ? 'Waiting for ' + S.oppName + '…' : 'Next round'); $('nextBtn').disabled = !S.matchOver && S.myNext;
+  }
+  $('nextBtn').addEventListener('click', function () {
+    if (S.matchOver) { $('roundOv').classList.remove('show'); showMatch(); return; }
+    S.myNext = true; send({ t: 'next' }); renderRound(); maybeNext();
+  });
+  function maybeNext() {
+    if (S.roundOver && !S.matchOver && S.myNext && S.oppNext) {
+      S.round++; resetRound(); S.phase = 'set'; setBox.clear(); $('roundOv').classList.remove('show'); renderGame();
+    }
+  }
+  function showMatch() {
+    var won = S.myPts > S.oppPts; S.phase = 'ended';
+    $('matchEmoji').textContent = won ? '🏆' : '🥈'; $('matchTitle').textContent = won ? 'You won the match!' : S.oppName + ' won the match';
+    $('matchText').textContent = won ? 'Great guessing! 🎉' : 'Good game! Ask for a rematch.'; $('matchScore').textContent = S.myName + ' ' + S.myPts + ' - ' + S.oppPts + ' ' + S.oppName;
+    $('matchOv').classList.add('show'); if (won) confetti();
+  }
+
+  /* Leave */
+  $('leaveBtn').addEventListener('click', function () {
+    if (S.phase === 'menu') { location.href = 'index.html'; return; }
+    ask('Leave multiplayer?', 'The match will end for both players.', 'Yes, leave', function () { try { send({ t: 'bye' }); } catch (e) {} closePeer(); location.href = 'index.html'; });
+  });
+  $('askNo').addEventListener('click', function () { $('askOv').classList.remove('show'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('askOv').classList.remove('show'); });
+  window.addEventListener('pagehide', function () { try { if (peer) peer.destroy(); } catch (e) {} });
+})();
+</script>
+</body>
+</html>
