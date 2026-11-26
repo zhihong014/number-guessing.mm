@@ -118,6 +118,14 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .hist .no { color: var(--muted); font-weight: 900; font-size: .8rem; } .hist .sc { font-weight: 900; font-size: 1.2rem; text-align: center; }
 .tiles { display: flex; gap: 4px; } .tiles span { width: 28px; height: 34px; display: grid; place-items: center; border-radius: 9px; font-weight: 900; }
 
+.hbtns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.pname { width: 100%; margin-top: 2px; text-align: center; font-weight: 900; font-size: 1rem; color: var(--ink); background: transparent; border: 0; border-bottom: 3px dashed #cfc4f5; padding: 2px 0; }
+.pname:focus { outline: none; border-bottom-color: #7b5cff; }
+.react { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: -6px 0 16px; }
+.react button { background: #fff; color: var(--ink); border-radius: 99px; padding: 8px 13px; font-weight: 900; box-shadow: 0 3px 0 #d6cdf5; }
+.react button:active { transform: translateY(3px); box-shadow: none; }
+.toast { position: fixed; top: 14px; left: 50%; transform: translate(-50%, -80px); z-index: 40; background: var(--ink); color: #fff; font-weight: 900; padding: 11px 20px; border-radius: 99px; box-shadow: 0 8px 20px rgba(0,0,0,.3); transition: transform .25s; pointer-events: none; max-width: 90vw; text-align: center; }
+.toast.show { transform: translate(-50%, 0); }
 /* Popups */
 .overlay { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(25,10,70,.6); }
 .overlay.show { display: flex; }
@@ -138,7 +146,11 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 <div class="wrap">
   <header class="top">
     <div class="brand"><div class="logo" aria-hidden="true">#</div><div><h1>Multiplayer</h1><p>1 vs 1 number duel</p></div></div>
-    <button id="leaveBtn" class="btn b-ghost" type="button">🏠 Menu</button>
+    <div class="hbtns">
+      <button id="backBtn" class="btn b-ghost hidden" type="button">← Back</button>
+      <button id="muteBtn" class="btn b-ghost" type="button" aria-pressed="false" aria-label="Sound on">🔊</button>
+      <button id="leaveBtn" class="btn b-ghost" type="button">🏠 Menu</button>
+    </div>
   </header>
 
   <!-- 1. Multiplayer main page -->
@@ -151,6 +163,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
       <button id="joinBtn" class="btn b-violet block big" type="button">🔑 Join game</button>
     </div>
     <p class="msg" id="menuMsg" aria-live="polite"></p>
+    <p class="info hidden" id="saveNote">The secret numbers you lock in are saved anonymously to help improve the game.</p>
   </section>
 
   <!-- Join screen -->
@@ -171,7 +184,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
       <div class="linkrow" style="margin-top:10px"><input id="linkOut" readonly aria-label="Invite link"></div>
     </div>
     <div class="players">
-      <div class="pl"><small>You</small><span id="plMe">Player</span></div>
+      <div class="pl"><small>You (type to rename)</small><input id="roomName" class="pname" maxlength="12" aria-label="Your name" autocomplete="off"></div>
       <div class="pl wait" id="plOppBox"><small>Opponent</small><span id="plOpp">Waiting…</span></div>
     </div>
     <h2>Game method</h2>
@@ -190,6 +203,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
       <div class="mid"><span id="roundLbl">Round 1 of 3</span><small id="goalLbl">First to 2</small></div>
       <div class="side opp"><small id="bOpp">Opponent</small><b id="oppPts">0</b></div>
     </div>
+
+    <div class="react" id="reactBar" role="group" aria-label="Quick reactions"></div>
 
     <div class="card center hidden" id="pRps">
       <h2>✊ ✋ ✌️ Rock Paper Scissors</h2>
@@ -223,6 +238,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   </section>
 </div>
 
+<div class="toast" id="toast" aria-live="polite"></div>
 <!-- Round result -->
 <div class="overlay" id="roundOv" role="dialog" aria-modal="true" aria-labelledby="roundTitle">
   <div class="popup">
@@ -239,6 +255,8 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   <div class="popup">
     <div class="emoji" id="matchEmoji">🏆</div><h2 id="matchTitle"></h2><p id="matchText"></p>
     <div class="score2" id="matchScore"></div>
+    <p class="info" id="rematchInfo" aria-live="polite"></p>
+    <button id="rematchBtn" class="btn b-pink block" type="button">🔁 Rematch</button>
     <a class="btn b-violet block" href="multiplayer.html">Multiplayer menu</a>
     <a class="btn b-mint block" href="index.html">Main menu</a>
   </div>
@@ -264,12 +282,15 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
+  /* ===== OPTIONAL: save the numbers players lock in to your own Supabase database =====
+     Leave both empty to keep saving switched off. Setup steps are in supabase-setup.sql. */
+  var SUPABASE_URL = '', SUPABASE_ANON_KEY = '';
   var PREFIX = 'ngmp-', ALPHA = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
-  var peer = null, conn = null, S = { phase: 'menu', role: '', rounds: 3, code: '', myName: 'Player', oppName: 'Opponent' };
+  var peer = null, conn = null, S = { phase: 'menu', role: '', rounds: 3, code: '', myName: 'Player', oppName: 'Opponent', lastOppReact: 0 };
   var EMO = { r: '✊', p: '✋', s: '✌️' }, BEATS = { r: 's', p: 'r', s: 'p' };
 
   /* ---------- small helpers ---------- */
-  function show(id) { ['sMenu', 'sJoin', 'sRoom', 'sGame'].forEach(function (x) { $(x).classList.toggle('hidden', x !== id); }); }
+  function show(id) { ['sMenu', 'sJoin', 'sRoom', 'sGame'].forEach(function (x) { $(x).classList.toggle('hidden', x !== id); }); $('backBtn').classList.toggle('hidden', id === 'sMenu'); }
   function panel(id) { ['pRps', 'pSet', 'pPlay'].forEach(function (x) { $(x).classList.toggle('hidden', x !== id); }); }
   function tiles(str) { return String(str).split('').map(function (d) { return '<span>' + d + '</span>'; }).join(''); }
   function score(g, secret) { var n = 0; for (var i = 0; i < 4; i++) if (g[i] === secret[i]) n++; return n; }
@@ -298,6 +319,59 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   }
   try { $('nameIn').value = localStorage.getItem('ng-mp-name') || ''; } catch (e) {}
   $('nameIn').addEventListener('input', function () { try { localStorage.setItem('ng-mp-name', $('nameIn').value); } catch (e) {} });
+
+  /* ---------- sound effects (made by the browser, no files needed) ---------- */
+  var audio = null, muted = false;
+  try { muted = localStorage.getItem('ng-mp-muted') === '1'; } catch (e) {}
+  function tone(f, at, dur, type, vol) {
+    if (muted) return;
+    try {
+      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+      var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + at;
+      o.type = type || 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.15, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + dur + 0.05);
+    } catch (e) {}
+  }
+  function melody(notes, step, type, vol) { notes.forEach(function (f, i) { tone(f, i * step, step * 1.6, type, vol); }); }
+  var SFX = {
+    click: function () { tone(660, 0, .07, 'triangle', .12); },
+    sent: function () { tone(520, 0, .08, 'triangle', .12); tone(780, .07, .1, 'triangle', .12); },
+    score: function (s) { tone([260, 340, 420, 520][s] || 260, 0, .2, 'sine', .16); },
+    oppGuess: function () { tone(420, 0, .1, 'square', .06); },
+    yourTurn: function (d) { tone(880, d || 0, .12, 'sine', .14); tone(1175, (d || 0) + .12, .18, 'sine', .14); },
+    join: function () { melody([523, 784], .12, 'sine', .14); },
+    react: function () { melody([988, 1319], .08, 'sine', .12); },
+    roundWin: function () { melody([523, 659, 784, 1047], .11, 'triangle', .16); },
+    roundLose: function () { melody([392, 330, 262], .16, 'sine', .14); },
+    matchWin: function () { melody([523, 659, 784, 1047, 784, 1047, 1319], .12, 'triangle', .18); },
+    matchLose: function () { melody([330, 294, 262, 196], .2, 'sine', .14); }
+  };
+  function syncMute() { $('muteBtn').textContent = muted ? '🔇' : '🔊'; $('muteBtn').setAttribute('aria-pressed', String(muted)); $('muteBtn').setAttribute('aria-label', muted ? 'Sound off' : 'Sound on'); }
+  $('muteBtn').addEventListener('click', function () { muted = !muted; try { localStorage.setItem('ng-mp-muted', muted ? '1' : '0'); } catch (e) {} syncMute(); SFX.click(); });
+  syncMute();
+
+  /* ---------- quick reactions ---------- */
+  var REACTS = ['😈', '😅', '😎', '😱', '🤔', '👏', 'Nice try!', 'Too easy!', 'Hurry up!', 'Good luck!'], lastReact = 0, toastTimer = null;
+  function toast(text) { var t = $('toast'); t.textContent = text; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2600); }
+  REACTS.forEach(function (r, i) {
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = r; b.setAttribute('aria-label', 'Send ' + r);
+    b.addEventListener('click', function () {
+      var now = Date.now(); if (now - lastReact < 1000 || !conn || !conn.open) return; lastReact = now;
+      send({ t: 'chat', k: i }); toast('You: ' + r); SFX.click();
+    });
+    $('reactBar').appendChild(b);
+  });
+
+  /* ---------- optional: save chosen numbers to Supabase ---------- */
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) $('saveNote').classList.remove('hidden');
+  function saveNumber(n) {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+    var h = { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
+    if (SUPABASE_ANON_KEY.indexOf('eyJ') === 0) h['Authorization'] = 'Bearer ' + SUPABASE_ANON_KEY;   // only legacy JWT-style keys
+    try { fetch(SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/secret_numbers', { method: 'POST', headers: h, body: JSON.stringify({ number: n, room_code: S.code || null, round_no: S.round || 1, role: S.role }) }).catch(function () {}); } catch (e) {}
+  }
 
   /* ---------- digit boxes ---------- */
   function makeBoxes(el, onEnter) {
@@ -350,7 +424,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 
   function joinGame(code) {
     if (!libOk()) { show('sMenu'); return; }
-    S.role = 'guest'; S.myName = getName(); closePeer(); $('joinMsg').textContent = 'Connecting…';
+    S.role = 'guest'; S.myName = getName(); S.code = code; closePeer(); $('joinMsg').textContent = 'Connecting…';
     var p = new Peer(); peer = p;
     S.timer = setTimeout(function () { if (S.phase === 'menu') { $('joinMsg').textContent = 'Could not connect. Check the code. Some strict networks (school, office) block direct connections.'; closePeer(); } }, 20000);
     p.on('open', function () {
@@ -370,6 +444,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     c.on('error', function () {});
   }
   function opponentLeft() {
+    if (S.matchDone) { S.oppLeft = true; renderRematch(); return; }
     if (S.phase === 'ended') return;
     if (S.phase === 'room' && S.role === 'host') { S.oppName = ''; conn = null; renderRoom(); return; }   // host keeps room open
     showGone('Opponent left', 'The connection was closed, so the match has ended.');
@@ -378,7 +453,10 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 
   function onData(m) {
     switch (m.t) {
-      case 'hello': if (S.role === 'host') { S.oppName = String(m.name || 'Guest').slice(0, 12); send({ t: 'settings', name: S.myName, rounds: S.rounds }); renderRoom(); } break;
+      case 'hello': if (S.role === 'host') { S.oppName = String(m.name || 'Guest').slice(0, 12); send({ t: 'settings', name: S.myName, rounds: S.rounds }); renderRoom(); SFX.join(); } break;
+      case 'name': S.oppName = String(m.name || 'Opponent').slice(0, 12); if (S.phase === 'room') renderRoom(); else if (S.phase !== 'menu') renderGame(); break;
+      case 'chat': if (REACTS[m.k] && Date.now() - S.lastOppReact > 700) { S.lastOppReact = Date.now(); toast(S.oppName + ': ' + REACTS[m.k]); SFX.react(); } break;
+      case 'rematch': S.oppRematch = true; if (S.matchDone) renderRematch(); maybeRematch(); break;
       case 'settings': if (S.role === 'guest') { clearTimeout(S.timer); S.oppName = String(m.name || 'Host').slice(0, 12); if ([1, 3, 5].indexOf(m.rounds) >= 0) S.rounds = m.rounds; if (S.phase === 'menu') S.phase = 'room'; show('sRoom'); renderRoom(); } break;
       case 'full': $('joinMsg').textContent = 'This room already has two players.'; closePeer(); break;
       case 'start': if (S.role === 'guest' && S.phase === 'room') beginMatch(); break;
@@ -424,7 +502,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     var host = S.role === 'host';
     $('hostOnly').classList.toggle('hidden', !host);
     if (host) { $('codeTiles').innerHTML = tiles(S.code); $('linkOut').value = inviteLink(); }
-    $('plMe').textContent = S.myName; $('plOpp').textContent = S.oppName || 'Waiting…'; $('plOppBox').classList.toggle('wait', !S.oppName);
+    if (document.activeElement !== $('roomName')) $('roomName').value = S.myName; $('plOpp').textContent = S.oppName || 'Waiting…'; $('plOppBox').classList.toggle('wait', !S.oppName);
     $('goalText').textContent = 'Best of ' + S.rounds + ' round' + (S.rounds > 1 ? 's' : '') + '. First to ' + need() + ' point' + (need() > 1 ? 's' : '') + ' wins.';
     Array.prototype.forEach.call($('roundSeg').children, function (b) { b.setAttribute('aria-pressed', String(parseInt(b.dataset.r, 10) === S.rounds)); b.disabled = !host; });
     $('startBtn').classList.toggle('hidden', !host); $('startBtn').disabled = !S.oppName;
@@ -438,8 +516,9 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     S.oppReveal = null; S.oppVerified = null; S.myNext = false; S.oppNext = false; S.turn = '';
   }
   function beginMatch() {
-    S.myPts = 0; S.oppPts = 0; S.round = 1; S.matchOver = false; S.myRps = ''; S.oppRps = ''; S.rpsWinner = '';
-    resetRound(); S.phase = 'rps'; show('sGame'); renderGame();
+    S.myPts = 0; S.oppPts = 0; S.round = 1; S.matchOver = false; S.matchDone = false; S.myRematch = false; S.oppRematch = false; S.oppLeft = false;
+    S.myRps = ''; S.oppRps = ''; S.rpsWinner = ''; $('rpsInfo').textContent = 'Pick one!';
+    resetRound(); setBox.clear(); guessBox.clear(); S.phase = 'rps'; show('sGame'); renderGame();
   }
 
   function renderGame() {
@@ -473,7 +552,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   /* Rock paper scissors */
   $('rpsBtns').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b || S.phase !== 'rps' || S.myRps) return;
-    S.myRps = b.dataset.c; send({ t: 'rps', c: S.myRps }); $('rpsInfo').textContent = 'Waiting for ' + (S.oppName || 'opponent') + '…'; renderGame(); resolveRps();
+    S.myRps = b.dataset.c; SFX.click(); send({ t: 'rps', c: S.myRps }); $('rpsInfo').textContent = 'Waiting for ' + (S.oppName || 'opponent') + '…'; renderGame(); resolveRps();
   });
   function resolveRps() {
     if (!(S.myRps && S.oppRps)) return;
@@ -491,13 +570,13 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     if (S.phase !== 'set' || S.myReady) return;
     var n = setBox.get();
     if (!/^\d{4}$/.test(n)) { $('setMsg').textContent = 'Enter exactly 4 digits (for example 0612).'; setBox.shake(); setBox.focus(); return; }
-    $('setMsg').textContent = ''; S.secret = n; S.salt = Array.prototype.map.call(rand(8), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); S.myReady = true; setBox.enable(false); $('lockBtn').disabled = true;
+    $('setMsg').textContent = ''; SFX.click(); saveNumber(n); S.secret = n; S.salt = Array.prototype.map.call(rand(8), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); S.myReady = true; setBox.enable(false); $('lockBtn').disabled = true;
     sha(S.secret + ':' + S.salt).then(function (h) { S.myCommit = h; S.sentReady = true; send({ t: 'ready', commit: h }); renderGame(); maybeStartPlay(); });
   }
   function maybeStartPlay() {
     if (S.phase === 'set' && S.myReady && S.sentReady && S.oppReady && S.secret) {
       var base = S.rpsWinner, other = base === 'me' ? 'opp' : 'me';
-      S.turn = (S.round % 2 === 1) ? base : other; S.phase = 'play'; guessBox.clear(); renderGame();
+      S.turn = (S.round % 2 === 1) ? base : other; S.phase = 'play'; guessBox.clear(); renderGame(); if (S.turn === 'me') SFX.yourTurn(0);
     }
   }
 
@@ -507,17 +586,17 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     if (S.phase !== 'play' || S.turn !== 'me' || S.awaiting || S.roundOver) return;
     var g = guessBox.get();
     if (!/^\d{4}$/.test(g)) { $('guessMsg').textContent = 'Enter all 4 digits (for example 0023).'; guessBox.shake(); guessBox.focus(); return; }
-    $('guessMsg').textContent = ''; S.awaiting = true; S.pending = g; send({ t: 'guess', g: g }); guessBox.clear(); renderGame();
+    $('guessMsg').textContent = ''; S.awaiting = true; S.pending = g; send({ t: 'guess', g: g }); SFX.sent(); guessBox.clear(); renderGame();
   }
   function handleGuess(m) {
     if (S.phase !== 'play' || S.turn !== 'opp' || S.roundOver || !/^\d{4}$/.test(String(m.g))) return;
     var s = score(m.g, S.secret); S.oppGuesses.push({ g: m.g, s: s }); send({ t: 'result', s: s });
-    if (s === 4) endRound('opp', 'guessed'); else { S.turn = 'me'; renderGame(); }
+    if (s === 4) endRound('opp', 'guessed'); else { S.turn = 'me'; renderGame(); SFX.oppGuess(); SFX.yourTurn(.2); }
   }
   function handleResult(m) {
     if (!S.awaiting || !(m.s >= 0 && m.s <= 4)) return;
     S.myGuesses.push({ g: S.pending, s: m.s }); S.awaiting = false;
-    if (m.s === 4) endRound('me', 'guessed'); else { S.turn = 'opp'; renderGame(); }
+    if (m.s === 4) endRound('me', 'guessed'); else { S.turn = 'opp'; renderGame(); SFX.score(m.s); }
   }
   $('surBtn').addEventListener('click', function () {
     if (S.roundOver) return;
@@ -531,6 +610,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     S.matchOver = (winner === 'me' ? S.myPts : S.oppPts) >= need();
     send({ t: 'reveal', secret: S.secret, salt: S.salt });
     renderGame(); renderRound(); $('roundOv').classList.add('show');
+    if (S.matchOver) (winner === 'me' ? SFX.matchWin() : SFX.matchLose()); else (winner === 'me' ? SFX.roundWin() : SFX.roundLose());
   }
   function verifyOpp() {
     var r = S.oppReveal; if (!r) return;
@@ -562,11 +642,42 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     }
   }
   function showMatch() {
-    var won = S.myPts > S.oppPts; S.phase = 'ended';
+    var won = S.myPts > S.oppPts; S.matchDone = true; renderRematch();
     $('matchEmoji').textContent = won ? '🏆' : '🥈'; $('matchTitle').textContent = won ? 'You won the match!' : S.oppName + ' won the match';
     $('matchText').textContent = won ? 'Great guessing! 🎉' : 'Good game! Ask for a rematch.'; $('matchScore').textContent = S.myName + ' ' + S.myPts + ' - ' + S.oppPts + ' ' + S.oppName;
     $('matchOv').classList.add('show'); if (won) confetti();
   }
+
+  /* Rematch */
+  function renderRematch() {
+    $('rematchBtn').disabled = S.myRematch || !!S.oppLeft;
+    $('rematchBtn').textContent = S.myRematch ? 'Waiting for ' + S.oppName + '…' : '🔁 Rematch';
+    $('rematchInfo').textContent = S.oppLeft ? S.oppName + ' left the room.' : (S.oppRematch && !S.myRematch ? S.oppName + ' wants a rematch!' : '');
+  }
+  $('rematchBtn').addEventListener('click', function () { if (!S.matchDone || S.myRematch) return; S.myRematch = true; SFX.click(); send({ t: 'rematch' }); renderRematch(); maybeRematch(); });
+  function maybeRematch() {
+    if (S.matchDone && S.myRematch && S.oppRematch) { $('matchOv').classList.remove('show'); $('roundOv').classList.remove('show'); beginMatch(); }
+  }
+
+  /* Rename in the room */
+  $('roomName').addEventListener('input', function () {
+    var v = $('roomName').value.slice(0, 12).trim(); S.myName = v || 'Player';
+    $('nameIn').value = v; try { localStorage.setItem('ng-mp-name', v); } catch (e) {}
+    send({ t: 'name', name: S.myName });
+  });
+
+  /* Back to the multiplayer menu */
+  function toMultiplayerMenu() {
+    clearTimeout(S.timer); closePeer();
+    S = { phase: 'menu', role: '', rounds: 3, code: '', myName: getName(), oppName: '', lastOppReact: 0 };
+    ['roundOv', 'matchOv', 'askOv', 'goneOv'].forEach(function (i) { $(i).classList.remove('show'); });
+    $('joinMsg').textContent = ''; $('menuMsg').textContent = ''; $('codeIn').value = ''; show('sMenu');
+  }
+  $('backBtn').addEventListener('click', function () {
+    var idle = S.phase === 'menu' || S.phase === 'ended' || S.matchDone || (S.phase === 'room' && !S.oppName);
+    if (idle) toMultiplayerMenu();
+    else ask('Back to the multiplayer menu?', 'You will leave this room and the match will end for both players.', 'Yes, go back', toMultiplayerMenu);
+  });
 
   /* Leave */
   $('leaveBtn').addEventListener('click', function () {
