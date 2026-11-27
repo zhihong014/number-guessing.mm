@@ -127,6 +127,11 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 .react button:active { transform: translateY(3px); box-shadow: none; }
 .toast { position: fixed; top: 14px; left: 50%; transform: translate(-50%, -80px); z-index: 40; background: var(--ink); color: #fff; font-weight: 900; padding: 11px 20px; border-radius: 99px; box-shadow: 0 8px 20px rgba(0,0,0,.3); transition: transform .25s; pointer-events: none; max-width: 90vw; text-align: center; }
 .toast.show { transform: translate(-50%, 0); }
+.rules-popup { text-align: left; }
+.rules-popup .emoji, .rules-popup h2 { text-align: center; }
+.rules-popup ol { margin: 12px 0 6px; padding-left: 1.5rem; line-height: 1.5; font-weight: 700; }
+.rules-popup li { margin-bottom: 8px; padding-left: 4px; }
+.rules-popup li::marker { color: var(--pink); font-weight: 900; }
 /* Popups */
 .overlay { position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center; padding: 18px; background: rgba(25,10,70,.6); }
 .overlay.show { display: flex; }
@@ -149,6 +154,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     <div class="brand"><div class="logo" aria-hidden="true">#</div><div><h1>Multiplayer</h1><p>1 vs 1 number duel</p></div></div>
     <div class="hbtns">
       <button id="backBtn" class="btn b-ghost hidden" type="button">← Back</button>
+      <button id="rulesBtn" class="btn b-ghost" type="button">📋 Rules</button>
       <button id="muteBtn" class="btn b-ghost" type="button" aria-pressed="false" aria-label="Sound on">🔊</button>
       <button id="leaveBtn" class="btn b-ghost" type="button">🏠 Menu</button>
     </div>
@@ -222,6 +228,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
       <div class="digits" id="setBoxes" role="group" aria-label="Your secret number"></div>
       <p class="msg" id="setMsg" aria-live="polite"></p>
       <button id="lockBtn" class="btn b-pink block" type="button">🔒 Lock in my number</button>
+      <p class="info hidden" id="saveWarn" aria-live="polite"></p>
       <p class="info" id="setInfo" aria-live="polite"></p>
     </div>
 
@@ -239,6 +246,25 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   </section>
 </div>
 
+<div class="overlay" id="rulesOv" role="dialog" aria-modal="true" aria-labelledby="mpRulesTitle">
+  <div class="popup rules-popup">
+    <div class="emoji">📋</div>
+    <h2 id="mpRulesTitle">Multiplayer rules</h2>
+    <ol>
+      <li>One player hosts a room and shares the 5-character invitation code or the invite link. The other player joins with it.</li>
+      <li>The host chooses the game method: 1, 3 or 5 rounds. The first player to win the majority of the rounds wins the match (2 of 3, or 3 of 5). Each round win earns 1 point.</li>
+      <li>Before each round, both players secretly type their own 4-digit number (it can start with 0) and lock it in.</li>
+      <li>Rock Paper Scissors decides who guesses first in round 1. In later rounds, the player who guesses first alternates.</li>
+      <li>Players take turns guessing the opponent’s number. After each guess, the answer shows how many digits are right and in the right place.</li>
+      <li>Both players can see their own guesses and the opponent’s guesses live, so you can watch how close they are getting to your number!</li>
+      <li>A round ends when someone guesses the number exactly, or when a player gives up the round. The other player earns the point.</li>
+      <li>When a round ends, both numbers are revealed and checked, so nobody can change their number or give a wrong answer. A warning appears if something does not match.</li>
+      <li>Use the quick reactions to cheer or tease your opponent, and press Rematch after the match to play again in the same room.</li>
+      <li>If a player leaves, the match ends for both players.</li>
+    </ol>
+    <button id="closeRules" class="btn b-mint block" type="button">Got it! 👍</button>
+  </div>
+</div>
 <div class="toast" id="toast" aria-live="polite"></div>
 <!-- Round result -->
 <div class="overlay" id="roundOv" role="dialog" aria-modal="true" aria-labelledby="roundTitle">
@@ -285,7 +311,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   var $ = function (id) { return document.getElementById(id); };
   /* ===== OPTIONAL: save the numbers players lock in to your own Supabase database =====
      Leave both empty to keep saving switched off. Setup steps are in supabase-setup.sql. */
-  var SUPABASE_URL = 'https://usuvqxuimbuqsgvtghjy.supabase.co', SUPABASE_ANON_KEY = 'sb_publishable_S4CqyzLDknetBMmPb5asOA_2IeZIGhc';
+  var SUPABASE_URL = '', SUPABASE_ANON_KEY = '';
   var PREFIX = 'ngmp-', ALPHA = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
   var peer = null, conn = null, S = { phase: 'menu', role: '', rounds: 3, code: '', myName: 'Player', oppName: 'Opponent', lastOppReact: 0 };
   var EMO = { r: '✊', p: '✋', s: '✌️' }, BEATS = { r: 's', p: 'r', s: 'p' };
@@ -367,11 +393,17 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 
   /* ---------- optional: save chosen numbers to Supabase ---------- */
   if (SUPABASE_URL && SUPABASE_ANON_KEY) $('saveNote').classList.remove('hidden');
-  function saveNumber(n) {
+  function saveNumber(n, retried) {
+    $('saveWarn').classList.add('hidden');
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
+    var failed = function (why) {
+      console.warn('Numbering Guessing: could not save the number (' + why + ')');
+      if (!retried) { setTimeout(function () { saveNumber(n, true); }, 1500); return; }
+      $('saveWarn').textContent = '⚠️ Your number could not be saved to the database (' + why + '). The game still works.'; $('saveWarn').classList.remove('hidden');
+    };
     var h = { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
     if (SUPABASE_ANON_KEY.indexOf('eyJ') === 0) h['Authorization'] = 'Bearer ' + SUPABASE_ANON_KEY;   // only legacy JWT-style keys
-    try { fetch(SUPABASE_URL.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '') + '/rest/v1/secret_numbers', { method: 'POST', headers: h, body: JSON.stringify({ number: n, room_code: S.code || null, round_no: S.round || 1, role: S.role }) }).catch(function () {}); } catch (e) {}
+    try { fetch(SUPABASE_URL.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '') + '/rest/v1/secret_numbers', { method: 'POST', headers: h, body: JSON.stringify({ number: n, room_code: S.code || null, round_no: S.round || 1, role: S.role }) }).then(function (r) { if (!r.ok) failed('status ' + r.status); }).catch(function (e) { failed('network error'); }); } catch (e) { failed('error'); }
   }
 
   /* ---------- digit boxes ---------- */
@@ -680,13 +712,19 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     else ask('Back to the multiplayer menu?', 'You will leave this room and the match will end for both players.', 'Yes, go back', toMultiplayerMenu);
   });
 
+  /* Rules popup */
+  function closeRulesOv() { $('rulesOv').classList.remove('show'); }
+  $('rulesBtn').addEventListener('click', function () { $('rulesOv').classList.add('show'); $('closeRules').focus(); });
+  $('closeRules').addEventListener('click', closeRulesOv);
+  $('rulesOv').addEventListener('click', function (e) { if (e.target === $('rulesOv')) closeRulesOv(); });
+
   /* Leave */
   $('leaveBtn').addEventListener('click', function () {
     if (S.phase === 'menu') { location.href = 'index.html'; return; }
     ask('Leave multiplayer?', 'The match will end for both players.', 'Yes, leave', function () { try { send({ t: 'bye' }); } catch (e) {} closePeer(); location.href = 'index.html'; });
   });
   $('askNo').addEventListener('click', function () { $('askOv').classList.remove('show'); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') $('askOv').classList.remove('show'); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { $('askOv').classList.remove('show'); closeRulesOv(); } });
   window.addEventListener('pagehide', function () { try { if (peer) peer.destroy(); } catch (e) {} });
 })();
 </script>
