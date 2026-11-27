@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Numbering Guessing - Multiplayer</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23ffc933'/%3E%3Ctext x='50' y='74' font-size='72' text-anchor='middle' font-family='Arial' font-weight='bold' fill='%232a1f5c'%3E%23%3C/text%3E%3C/svg%3E">
 <style>
 /* =====================================================
    EDIT ME: change the look of the multiplayer page here.
@@ -284,7 +285,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   var $ = function (id) { return document.getElementById(id); };
   /* ===== OPTIONAL: save the numbers players lock in to your own Supabase database =====
      Leave both empty to keep saving switched off. Setup steps are in supabase-setup.sql. */
-  var SUPABASE_URL = 'https://usuvqxuimbuqsgvtghjy.supabase.co/rest/v1/', SUPABASE_ANON_KEY = 'sb_publishable__RpzMK7LEjJQ6N2i-HVWDg_O4SVNTWW';
+  var SUPABASE_URL = '', SUPABASE_ANON_KEY = '';
   var PREFIX = 'ngmp-', ALPHA = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
   var peer = null, conn = null, S = { phase: 'menu', role: '', rounds: 3, code: '', myName: 'Player', oppName: 'Opponent', lastOppReact: 0 };
   var EMO = { r: '✊', p: '✋', s: '✌️' }, BEATS = { r: 's', p: 'r', s: 'p' };
@@ -370,7 +371,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
     var h = { 'apikey': SUPABASE_ANON_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' };
     if (SUPABASE_ANON_KEY.indexOf('eyJ') === 0) h['Authorization'] = 'Bearer ' + SUPABASE_ANON_KEY;   // only legacy JWT-style keys
-    try { fetch(SUPABASE_URL.replace(/\/$/, '') + '/rest/v1/secret_numbers', { method: 'POST', headers: h, body: JSON.stringify({ number: n, room_code: S.code || null, round_no: S.round || 1, role: S.role }) }).catch(function () {}); } catch (e) {}
+    try { fetch(SUPABASE_URL.trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '') + '/rest/v1/secret_numbers', { method: 'POST', headers: h, body: JSON.stringify({ number: n, room_code: S.code || null, round_no: S.round || 1, role: S.role }) }).catch(function () {}); } catch (e) {}
   }
 
   /* ---------- digit boxes ---------- */
