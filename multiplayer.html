@@ -306,6 +306,7 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="audio.js"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -347,36 +348,13 @@ button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid 
   try { $('nameIn').value = localStorage.getItem('ng-mp-name') || ''; } catch (e) {}
   $('nameIn').addEventListener('input', function () { try { localStorage.setItem('ng-mp-name', $('nameIn').value); } catch (e) {} });
 
-  /* ---------- sound effects (made by the browser, no files needed) ---------- */
-  var audio = null, muted = false;
-  try { muted = localStorage.getItem('ng-mp-muted') === '1'; } catch (e) {}
-  function tone(f, at, dur, type, vol) {
-    if (muted) return;
-    try {
-      audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-      if (audio.state === 'suspended') audio.resume();
-      var o = audio.createOscillator(), g = audio.createGain(), t = audio.currentTime + at;
-      o.type = type || 'sine'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.15, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      o.connect(g); g.connect(audio.destination); o.start(t); o.stop(t + dur + 0.05);
-    } catch (e) {}
-  }
-  function melody(notes, step, type, vol) { notes.forEach(function (f, i) { tone(f, i * step, step * 1.6, type, vol); }); }
-  var SFX = {
-    click: function () { tone(660, 0, .07, 'triangle', .12); },
-    sent: function () { tone(520, 0, .08, 'triangle', .12); tone(780, .07, .1, 'triangle', .12); },
-    score: function (s) { tone([260, 340, 420, 520][s] || 260, 0, .2, 'sine', .16); },
-    oppGuess: function () { tone(420, 0, .1, 'square', .06); },
-    yourTurn: function (d) { tone(880, d || 0, .12, 'sine', .14); tone(1175, (d || 0) + .12, .18, 'sine', .14); },
-    join: function () { melody([523, 784], .12, 'sine', .14); },
-    react: function () { melody([988, 1319], .08, 'sine', .12); },
-    roundWin: function () { melody([523, 659, 784, 1047], .11, 'triangle', .16); },
-    roundLose: function () { melody([392, 330, 262], .16, 'sine', .14); },
-    matchWin: function () { melody([523, 659, 784, 1047, 784, 1047, 1319], .12, 'triangle', .18); },
-    matchLose: function () { melody([330, 294, 262, 196], .2, 'sine', .14); }
-  };
-  function syncMute() { $('muteBtn').textContent = muted ? '🔇' : '🔊'; $('muteBtn').setAttribute('aria-pressed', String(muted)); $('muteBtn').setAttribute('aria-label', muted ? 'Sound off' : 'Sound on'); }
-  $('muteBtn').addEventListener('click', function () { muted = !muted; try { localStorage.setItem('ng-mp-muted', muted ? '1' : '0'); } catch (e) {} syncMute(); SFX.click(); });
+  /* ---------- sound effects (shared audio.js: effects + soft music, volumes are set in Settings) ---------- */
+  var SFX = {};
+  ['click', 'sent', 'oppGuess', 'join', 'react', 'roundWin', 'roundLose', 'matchWin', 'matchLose'].forEach(function (n) { SFX[n] = function () { if (window.NGAudio) NGAudio.play(n); }; });
+  SFX.score = function (x) { if (window.NGAudio) NGAudio.play('score', x); };
+  SFX.yourTurn = function (d) { if (window.NGAudio) NGAudio.play('yourTurn', d); };
+  function syncMute() { var m = !!(window.NGAudio && NGAudio.get().muted); $('muteBtn').textContent = m ? '🔇' : '🔊'; $('muteBtn').setAttribute('aria-pressed', String(m)); $('muteBtn').setAttribute('aria-label', m ? 'Sound off' : 'Sound on'); }
+  $('muteBtn').addEventListener('click', function () { if (window.NGAudio) NGAudio.setMuted(!NGAudio.get().muted); syncMute(); SFX.click(); });
   syncMute();
 
   /* ---------- quick reactions ---------- */

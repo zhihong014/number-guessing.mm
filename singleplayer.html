@@ -179,6 +179,7 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: c
     </div>
     <button id="homeBtn" class="btn b-rules" type="button">🏠 Home</button>
     <button id="rulesBtn" class="btn b-rules" type="button">📋 Rules</button>
+    <button id="muteBtn" class="btn b-rules" type="button" aria-pressed="false" aria-label="Sound on">🔊</button>
     <div class="level" aria-label="Your level">
       <div class="lrow"><span id="rank">Rookie</span><span id="lvl">Lv 1</span></div>
       <div class="bar"><i id="xpbar"></i></div>
@@ -275,9 +276,11 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: c
   </div>
 </div>
 
+<script src="audio.js"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
+  function sfx(n, a) { if (window.NGAudio) NGAudio.play(n, a); }
   var digitsEl = $('digits'), msgEl = $('msg'), guessBtn = $('guessBtn'), hintBtn = $('hintBtn'), giveUpBtn = $('giveUpBtn');
   var againBtn = $('againBtn'), bannerEl = $('banner'), historyEl = $('history'), emptyEl = $('empty'), hintsEl = $('hints');
   var countEl = $('count'), countTextEl = $('countText');
@@ -380,6 +383,7 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: c
     tries++;
     var score = countMatches(guess);
     addHistory(guess, score);
+    if (score < 4) sfx('score', score);
     if (score === 4) finish('win'); else clearBoxes();
   }
 
@@ -390,7 +394,7 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: c
     hintPos.push(pos);
     var s = document.createElement('span');
     s.textContent = '💡 Digit ' + (pos + 1) + ' is ' + secret[pos];
-    hintsEl.appendChild(s);
+    hintsEl.appendChild(s); sfx('click');
     updateHintBtn(true);
     var next = boxes.find(function (x) { return !x.value; }); if (next) next.focus();
   }
@@ -420,9 +424,9 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: c
       $('popupNumber').innerHTML = tiles(secret);
       $('popupXp').textContent = '+' + gain + ' XP';
       $('popupExtra').innerHTML = extra.join('<br>');
-      overlayEl.classList.add('show'); $('viewBtn').focus(); confetti();
+      overlayEl.classList.add('show'); $('viewBtn').focus(); confetti(); sfx('matchWin');
     } else {
-      save.streak = 0; persist(); renderProgress();
+      save.streak = 0; persist(); renderProgress(); sfx('roundLose');
       bannerEl.textContent = 'You gave up. The secret number is shown above. Try again!';
       againBtn.focus();
     }
@@ -492,6 +496,10 @@ a.btn { display: inline-block; text-decoration: none; color: #fff; text-align: c
     else if (overlayEl.classList.contains('show')) closePopup();
     else if (rulesEl.classList.contains('show')) closeRules();
   });
+
+  function syncMute() { var m = !!(window.NGAudio && NGAudio.get().muted); $('muteBtn').textContent = m ? '🔇' : '🔊'; $('muteBtn').setAttribute('aria-pressed', String(m)); $('muteBtn').setAttribute('aria-label', m ? 'Sound off' : 'Sound on'); }
+  $('muteBtn').addEventListener('click', function () { if (window.NGAudio) NGAudio.setMuted(!NGAudio.get().muted); syncMute(); sfx('click'); });
+  syncMute();
 
   startGame();
   openRules();   // show the rules every time the page opens

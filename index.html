@@ -93,6 +93,14 @@ h1 { margin: 0; font-size: clamp(2.1rem, 9vw, 3rem); font-weight: 900; line-heig
 .popup ol { margin: 14px 0 6px; padding-left: 1.5rem; line-height: 1.5; font-weight: 700; }
 .popup li { margin-bottom: 8px; padding-left: 4px; }
 .popup li::marker { color: var(--pink); font-weight: 900; }
+.popup h3 { margin: 16px 0 4px; font-size: 1.05rem; font-weight: 900; }
+.popup p, .popup ul { margin: 0; font-weight: 700; line-height: 1.5; color: #4d4180; }
+.popup ul { padding-left: 1.3rem; }
+.popup a { color: #5b3df5; font-weight: 900; }
+.popup .made { font-size: 1.2rem; }
+.slider { display: block; margin: 18px 0 6px; font-weight: 900; }
+.slider .top { display: flex; justify-content: space-between; margin-bottom: 8px; }
+.slider input[type=range] { width: 100%; height: 30px; accent-color: var(--pink); cursor: pointer; }
 .pbtn { display: block; width: 100%; margin-top: 10px; font: inherit; font-weight: 900; font-size: 1rem; border: 0; border-radius: 16px; padding: 14px 16px; cursor: pointer; background: var(--mint); color: #0b4a37; box-shadow: 0 5px 0 #1fa87e; }
 .pbtn:active { transform: translateY(4px); box-shadow: none; }
 .pbtn:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
@@ -111,10 +119,10 @@ h1 { margin: 0; font-size: clamp(2.1rem, 9vw, 3rem); font-weight: 900; line-heig
     <a class="btn play" href="singleplayer.html"><span class="ic">🎮</span><span class="lbl">Single player</span><span class="go" aria-hidden="true">▶</span></a>
     <a class="btn" href="multiplayer.html"><span class="ic">👥</span><span class="lbl">Multiplayer</span><span class="go" aria-hidden="true">▶</span></a>
     <div class="grid2">
-      <button type="button" class="btn small" aria-disabled="true"><span class="ic">⚙️</span><span class="lbl">Setting</span><span class="soon">Soon</span></button>
+      <button type="button" class="btn small" id="settingBtn"><span class="ic">⚙️</span><span class="lbl">Setting</span></button>
       <button type="button" class="btn small" id="rulesBtn"><span class="ic">📋</span><span class="lbl">Rules</span></button>
       <button type="button" class="btn small" aria-disabled="true"><span class="ic">🏅</span><span class="lbl">Leaderboard</span><span class="soon">Soon</span></button>
-      <button type="button" class="btn small" aria-disabled="true"><span class="ic">💬</span><span class="lbl">About</span><span class="soon">Soon</span></button>
+      <button type="button" class="btn small" id="aboutBtn"><span class="ic">💬</span><span class="lbl">About</span></button>
     </div>
     <div class="sep" aria-hidden="true"></div>
     <button type="button" class="btn exit"><span class="ic">🚪</span><span class="lbl">Exit</span></button>
@@ -140,14 +148,70 @@ h1 { margin: 0; font-size: clamp(2.1rem, 9vw, 3rem); font-weight: 900; line-heig
   </div>
 </div>
 
+<div class="overlay" id="settingPop" role="dialog" aria-modal="true" aria-labelledby="settingTitle">
+  <div class="popup">
+    <div class="emoji">⚙️</div>
+    <h2 id="settingTitle">Settings</h2>
+    <label class="slider"><span class="top"><span>🎵 Music volume</span><b id="musicVal">40%</b></span><input type="range" id="musicRange" min="0" max="100" step="1" value="40"></label>
+    <label class="slider"><span class="top"><span>🔔 Effects volume</span><b id="sfxVal">80%</b></span><input type="range" id="sfxRange" min="0" max="100" step="1" value="80"></label>
+    <button id="closeSetting" class="pbtn" type="button">Done</button>
+  </div>
+</div>
+
+<div class="overlay" id="aboutPop" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+  <div class="popup">
+    <div class="emoji">💬</div>
+    <h2 id="aboutTitle">About</h2>
+    <h3>🎮 The game</h3>
+    <p>Numbering Guessing is a 4-digit code-cracking game for one player or two. Every guess tells you how many digits are right and in the right place. Use the clues to crack the secret number!</p>
+    <h3>🆕 Version 1.0 and what’s new</h3>
+    <ul>
+      <li>Online multiplayer rooms with invitation codes</li>
+      <li>Rock Paper Scissors, best-of rounds and live guess histories</li>
+      <li>Quick reactions, rematch and sound effects</li>
+      <li>Levels, streaks, hints, daily challenge and badges in single player</li>
+      <li>Soft background music and volume settings</li>
+    </ul>
+    <h3>🧑‍💻 Made by</h3>
+    <p class="made">ZH</p>
+    <h3>✉️ Feedback and contact</h3>
+    <p>Found a bug or have an idea? Write to <a id="mailLink" href="#">email</a></p>
+    <h3>🔒 Privacy</h3>
+    <p>Your level, XP, badges and settings are stored only in your own browser. In multiplayer, the 4-digit numbers players lock in are saved anonymously (the number, room code, round and host or guest role, never names) to help improve the game.</p>
+    <h3>🙏 Credits</h3>
+    <p>Player connection by PeerJS, number storage by Supabase, hosted on Vercel.</p>
+    <button id="closeAbout" class="pbtn" type="button">Got it! 👍</button>
+  </div>
+</div>
+
+<script src="audio.js"></script>
 <script>
 (function () {
-  var pop = document.getElementById('rulesPop'), open = document.getElementById('rulesBtn'), close = document.getElementById('closeRules');
-  function hide() { pop.classList.remove('show'); open.focus(); }
-  open.addEventListener('click', function () { pop.classList.add('show'); close.focus(); });
-  close.addEventListener('click', hide);
-  pop.addEventListener('click', function (e) { if (e.target === pop) hide(); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && pop.classList.contains('show')) hide(); });
+  function popup(openId, popId, closeId, onOpen) {
+    var pop = document.getElementById(popId), open = document.getElementById(openId), close = document.getElementById(closeId);
+    function hide() { pop.classList.remove('show'); open.focus(); }
+    open.addEventListener('click', function () { pop.classList.add('show'); if (onOpen) onOpen(); close.focus(); });
+    close.addEventListener('click', hide);
+    pop.addEventListener('click', function (e) { if (e.target === pop) hide(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && pop.classList.contains('show')) hide(); });
+  }
+  popup('rulesBtn', 'rulesPop', 'closeRules');
+  popup('aboutBtn', 'aboutPop', 'closeAbout');
+
+  /* Settings: two sliders for music and effects volume (saved by audio.js) */
+  var music = document.getElementById('musicRange'), sfx = document.getElementById('sfxRange');
+  function show() { document.getElementById('musicVal').textContent = music.value + '%'; document.getElementById('sfxVal').textContent = sfx.value + '%'; }
+  popup('settingBtn', 'settingPop', 'closeSetting', function () {
+    if (window.NGAudio) { var v = NGAudio.get(); music.value = Math.round(v.music * 100); sfx.value = Math.round(v.sfx * 100); }
+    show();
+  });
+  music.addEventListener('input', function () { if (window.NGAudio) NGAudio.setMusic(music.value / 100); show(); });
+  sfx.addEventListener('input', function () { if (window.NGAudio) NGAudio.setSfx(sfx.value / 100); show(); });
+  sfx.addEventListener('change', function () { if (window.NGAudio) NGAudio.play('score', 3); });   // plays a sample at the new volume
+
+  /* Contact email is built here so it is not sitting in the page as plain text */
+  var mail = ['wzhong141', 'gmail.com'].join('@'), link = document.getElementById('mailLink');
+  link.textContent = mail; link.href = 'mailto:' + mail + '?subject=' + encodeURIComponent('Numbering Guessing feedback');
 })();
 </script>
 </body>
